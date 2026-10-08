@@ -1,12 +1,12 @@
 import { ItemView, moment, setIcon, WorkspaceLeaf } from "obsidian";
 import { taskBadges } from "./badges";
 import { TaskSuggestModal } from "./TaskSuggestModal";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { formatClock } from "./pomodoro";
 import { today } from "./store";
 import { isClosed, PRIORITY_LABELS, PRIORITY_RANK, Task } from "./types";
 
-export const VIEW_TYPE_POMODORO = "task-tracker-pomodoro";
+export const VIEW_TYPE_POMODORO = "project-pulse-pomodoro";
 
 const RING_R = 92;
 const RING_C = 2 * Math.PI * RING_R; // circumference, for the progress stroke
@@ -21,7 +21,7 @@ export class PomodoroView extends ItemView {
 	private ringEl: SVGCircleElement | null = null;
 	private detailEl: HTMLElement | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 

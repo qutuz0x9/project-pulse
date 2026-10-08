@@ -1,6 +1,6 @@
 import { Events, moment, Notice, TFile } from "obsidian";
 import type { Moment } from "moment";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import type { PomodoroPhase, PomodoroState } from "./settings";
 import { today } from "./store";
 
@@ -15,7 +15,7 @@ export class Pomodoro extends Events {
 	private statusEl: HTMLElement;
 	private completing = false;
 
-	constructor(private plugin: TaskTrackerPlugin) {
+	constructor(private plugin: ProjectPulsePlugin) {
 		super();
 		this.statusEl = plugin.addStatusBarItem();
 		this.statusEl.addClass("tt-statusbar", "mod-clickable");
@@ -256,7 +256,7 @@ export class Pomodoro extends Events {
 			});
 			if (!full) new Notice(`Logged ${Math.floor(focusMs / 60_000)} min on ${file.basename}`);
 		} catch (e) {
-			new Notice(`Task Tracker: couldn't save focus time — ${e instanceof Error ? e.message : "unknown error"}`);
+			new Notice(`Project Pulse: couldn't save focus time — ${e instanceof Error ? e.message : "unknown error"}`);
 		}
 	}
 

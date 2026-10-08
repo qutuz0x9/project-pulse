@@ -1,5 +1,5 @@
 import { moment, Notice, setIcon, TFile } from "obsidian";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 
 /**
  * One timer at a time. The running timer lives in the plugin's saved data (not in memory only),
@@ -8,7 +8,7 @@ import type TaskTrackerPlugin from "./main";
 export class TaskTimer {
 	private statusEl: HTMLElement;
 
-	constructor(private plugin: TaskTrackerPlugin) {
+	constructor(private plugin: ProjectPulsePlugin) {
 		this.statusEl = plugin.addStatusBarItem();
 		this.statusEl.addClass("tt-statusbar", "mod-clickable");
 		this.statusEl.setAttr("aria-label", "Click to stop the task timer");
@@ -52,7 +52,7 @@ export class TaskTimer {
 				new Notice(`Logged ${formatDuration(end.diff(start))} on ${file.basename}`);
 			} catch (e) {
 				// Keep the timer running so the time isn't lost; the user can try stopping again.
-				new Notice(`Task Tracker: couldn't save time — ${e instanceof Error ? e.message : "unknown error"}`);
+				new Notice(`Project Pulse: couldn't save time — ${e instanceof Error ? e.message : "unknown error"}`);
 				return;
 			}
 		} else if (file) {
@@ -102,7 +102,7 @@ export function formatDuration(ms: number): string {
 }
 
 /** ▶ / ■ button used on list rows and board cards. */
-export function timerButton(parent: HTMLElement, plugin: TaskTrackerPlugin, file: TFile): HTMLElement {
+export function timerButton(parent: HTMLElement, plugin: ProjectPulsePlugin, file: TFile): HTMLElement {
 	const running = plugin.timer.isRunning(file);
 	const btn = parent.createEl("button", {
 		cls: `clickable-icon tt-timer-btn${running ? " is-running" : ""}`,

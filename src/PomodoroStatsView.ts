@@ -1,7 +1,7 @@
 import type { Chart } from "chart.js";
 import { ItemView, moment, setIcon, WorkspaceLeaf } from "obsidian";
 import { barChart } from "./charts";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import {
 	dailyMinutes,
 	focusByTask,
@@ -14,7 +14,7 @@ import {
 } from "./pomodoroStats";
 import { today } from "./store";
 
-export const VIEW_TYPE_POMODORO_STATS = "task-tracker-pomodoro-stats";
+export const VIEW_TYPE_POMODORO_STATS = "project-pulse-pomodoro-stats";
 
 const PURPLE = "#9b5de5";
 const ACCENT = { purple: "155, 93, 229", gold: "192, 131, 6", green: "13, 148, 136", blue: "37, 99, 235" };
@@ -25,7 +25,7 @@ export class PomodoroStatsView extends ItemView {
 	private charts: Chart[] = [];
 	private hasRendered = false;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 

@@ -1,9 +1,9 @@
 {
-	"id": "task-tracker",
-	"name": "Task Tracker",
+	"id": "project-pulse",
+	"name": "Project Pulse",
 	"version": "0.1.0",
 	"minAppVersion": "1.7.2",
-	"description": "Track tasks per project as notes, with a task list, analytics and charts.",
+	"description": "Projects and tasks as notes, with a dashboard, Kanban board, calendar, Today view, Pomodoro timer and progress analytics.",
 	"author": "qutuz0x9",
 	"isDesktopOnly": false
 }

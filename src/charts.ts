@@ -86,6 +86,7 @@ function axes(grid: string, horizontal: boolean, stacked: boolean) {
 	const value = {
 		stacked,
 		beginAtZero: true,
+		grace: "10%", // headroom so the highest point/line isn't cut off at the top
 		grid: { color: grid, drawTicks: false },
 		border: { display: false },
 		ticks: { padding: 8, precision: 0, maxTicksLimit: 6 },
@@ -94,7 +95,8 @@ function axes(grid: string, horizontal: boolean, stacked: boolean) {
 		stacked,
 		grid: { display: false },
 		border: { display: false },
-		ticks: { padding: 8, maxRotation: 0, autoSkipPadding: 12 }, // flat labels; skip some when crowded
+		// Flat labels. Date axes may skip some when crowded; a horizontal chart's names must all show.
+		ticks: horizontal ? { padding: 8, autoSkip: false } : { padding: 8, maxRotation: 0, autoSkipPadding: 12 },
 	};
 	return horizontal ? { x: value, y: category } : { x: category, y: value };
 }
@@ -196,7 +198,7 @@ export function burndownChart(canvas: HTMLCanvasElement, points: BurndownPoint[]
 					pointHoverRadius: 5,
 					pointHoverBorderWidth: 2,
 					pointHoverBorderColor: t.surface,
-					cubicInterpolationMode: "monotone", // smooth without overshooting real values
+					tension: 0, // straight segments: daily counts, no invented in-between values
 				},
 				{
 					type: "line",
@@ -210,7 +212,7 @@ export function burndownChart(canvas: HTMLCanvasElement, points: BurndownPoint[]
 					pointHoverRadius: 5,
 					pointHoverBorderWidth: 2,
 					pointHoverBorderColor: t.surface,
-					stepped: "after", // the plan drops on each due date, not gradually
+					tension: 0,
 				},
 				{
 					type: "bar",
@@ -255,7 +257,7 @@ export function statusTrendChart(canvas: HTMLCanvasElement, trend: StatusTrend, 
 				pointHoverRadius: 5,
 				pointBorderColor: t.surface,
 				pointBorderWidth: 2,
-				cubicInterpolationMode: "monotone" as const,
+				tension: 0, // whole-number counts per period — straight segments, not curves
 			})),
 		},
 		options: {

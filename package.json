@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-task-tracker",
+	"name": "obsidian-project-pulse",
 	"version": "0.1.0",
-	"description": "Obsidian plugin: project-based task tracker with analytics",
+	"description": "Obsidian plugin: projects and tasks as notes, with dashboard, board, calendar, Pomodoro and analytics",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

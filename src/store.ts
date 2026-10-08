@@ -11,7 +11,7 @@ import {
 } from "obsidian";
 import type { Moment } from "moment";
 import { nextDue, parseRepeat } from "./recurrence";
-import type { TaskTrackerSettings } from "./settings";
+import type { ProjectPulseSettings } from "./settings";
 import {
 	FM,
 	isClosed,
@@ -35,7 +35,7 @@ export class TaskStore extends Events {
 	private notifyChanged = debounce(() => this.trigger("changed"), 300, true);
 	private spawning = new Set<string>(); // recurring tasks whose next copy is being created
 
-	constructor(private app: App, private settings: TaskTrackerSettings) {
+	constructor(private app: App, private settings: ProjectPulseSettings) {
 		super();
 	}
 
@@ -296,7 +296,7 @@ export class TaskStore extends Events {
 			});
 			new Notice(`Next "${base}" created for ${due}`);
 		})()
-			.catch((e) => console.error("Task Tracker: failed to create next recurring task", e))
+			.catch((e) => console.error("Project Pulse: failed to create next recurring task", e))
 			.finally(() => this.spawning.delete(file.path));
 	}
 
@@ -355,7 +355,7 @@ export class TaskStore extends Events {
 				.processFrontMatter(file, (f) => {
 					f[FM.completed] = closed ? today() : "";
 				})
-				.catch((e) => console.error("Task Tracker: failed to update completed date", e));
+				.catch((e) => console.error("Project Pulse: failed to update completed date", e));
 		}
 	}
 }

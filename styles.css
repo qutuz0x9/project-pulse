@@ -1,4 +1,4 @@
-/* Task Tracker — purple-led to match the vault. */
+/* Project Pulse — purple-led design. */
 .tt-view {
 	--tt-accent: 155, 93, 229; /* #9b5de5 */
 	--tt-accent-light: 199, 125, 255; /* #c77dff */
@@ -1400,7 +1400,7 @@
 	background: rgb(155, 93, 229);
 }
 
-/* ---------- In-note block (```task-tracker```) ---------- */
+/* ---------- In-note block (```project-pulse```) ---------- */
 .tt-block {
 	padding: 14px 16px;
 	border-radius: 14px;
@@ -2105,3 +2105,28 @@
 .tt-list-view .tt-row.is-blocked .tt-title,
 .tt-list-view .tt-row.is-blocked .tt-pill,
 .tt-list-view .tt-row.is-blocked .tt-due-badge { opacity: 0.6; }
+
+/* ---------- Dashboard polish ---------- */
+.tt-all-clear {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+	padding: 10px 14px;
+	border-radius: 12px;
+	font-size: 0.88em;
+	font-weight: 600;
+	color: #2dd4bf;
+	background: rgba(13, 148, 136, 0.1);
+	border: 1px solid rgba(13, 148, 136, 0.3);
+}
+.theme-light .tt-all-clear { color: #0f766e; }
+/* Task titles in the dashboard lists: plain text, not underlined links */
+.tt-dash .tt-list-item .tt-title {
+	color: var(--text-normal);
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+.tt-dash .tt-list-item .tt-title:hover { color: rgb(199, 125, 255); }
+.theme-light .tt-dash .tt-list-item .tt-title:hover { color: #7b2cbf; }

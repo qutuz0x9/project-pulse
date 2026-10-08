@@ -1,12 +1,12 @@
 import { moment, normalizePath, Notice } from "obsidian";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { FM, isClosed, Task } from "./types";
 
 /**
  * Writes "<reviews folder>/Weekly Review <first day>.md" for this week (offset 0) or last week (-1)
  * and opens it. An existing review is opened as-is — delete it to regenerate.
  */
-export async function createWeeklyReview(plugin: TaskTrackerPlugin, weekOffset: 0 | -1): Promise<void> {
+export async function createWeeklyReview(plugin: ProjectPulsePlugin, weekOffset: 0 | -1): Promise<void> {
 	const { app } = plugin;
 	const start = moment().add(weekOffset, "weeks").startOf("week");
 	const end = start.clone().endOf("week");
@@ -28,7 +28,7 @@ export async function createWeeklyReview(plugin: TaskTrackerPlugin, weekOffset: 
 	await app.workspace.getLeaf(false).openFile(file);
 }
 
-function buildReview(plugin: TaskTrackerPlugin, from: string, to: string, fromLabel: string, toLabel: string): string {
+function buildReview(plugin: ProjectPulsePlugin, from: string, to: string, fromLabel: string, toLabel: string): string {
 	const tasks = plugin.store.getTasks();
 	const inWeek = (d: string | null) => d !== null && d >= from && d <= to;
 
@@ -123,7 +123,7 @@ function buildReview(plugin: TaskTrackerPlugin, from: string, to: string, fromLa
 }
 
 /** Hours from every task's `time-log` entries ("start/end") that started inside the week. */
-function trackedHours(plugin: TaskTrackerPlugin, tasks: Task[], from: string, to: string): number {
+function trackedHours(plugin: ProjectPulsePlugin, tasks: Task[], from: string, to: string): number {
 	let hours = 0;
 	for (const t of tasks) {
 		const log = plugin.app.metadataCache.getFileCache(t.file)?.frontmatter?.[FM.timeLog];
@@ -153,8 +153,8 @@ function timeNote(t: Task): string {
 	return t.spent ? ` — spent ${t.spent}h` : "";
 }
 
-async function ensureFolder(plugin: TaskTrackerPlugin, folder: string): Promise<void> {
-	// Create each missing level, e.g. "Task Tracker" then "Task Tracker/Reviews".
+async function ensureFolder(plugin: ProjectPulsePlugin, folder: string): Promise<void> {
+	// Create each missing level, e.g. "Project Pulse" then "Project Pulse/Reviews".
 	const parts = folder.split("/");
 	for (let i = 1; i <= parts.length; i++) {
 		const p = parts.slice(0, i).join("/");

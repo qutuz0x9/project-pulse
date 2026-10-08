@@ -1,11 +1,11 @@
 import { ItemView, moment, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 import { taskBadges } from "./badges";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { formatMinutes } from "./pomodoroStats";
 import { today } from "./store";
 import { isBlocked, isClosed, PRIORITY_LABELS, PRIORITY_RANK, Task } from "./types";
 
-export const VIEW_TYPE_TODAY = "task-tracker-today";
+export const VIEW_TYPE_TODAY = "project-pulse-today";
 
 const COMING_UP_DAYS = 3;
 const WEEK_DAYS = 7;
@@ -31,7 +31,7 @@ export class TodayView extends ItemView {
 	private selectedDay: string | null = null; // a day picked in the week strip
 	private expanded = new Set<string>(); // task paths with their checklist open
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 
@@ -447,13 +447,13 @@ export class TodayView extends ItemView {
 				if (line !== undefined) lines[lineNo] = line.replace(/^(\s*[-*+]\s+)\[[^\]]\]/, `$1[${done ? "x" : " "}]`);
 				return lines.join("\n");
 			})
-			.catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`));
+			.catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`));
 	}
 
 	// ---------- helpers ----------
 
 	private markDone(task: Task): void {
-		this.plugin.store.setStatus(task.file, "done").catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`));
+		this.plugin.store.setStatus(task.file, "done").catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`));
 	}
 
 	private openTask(file: TFile): void {

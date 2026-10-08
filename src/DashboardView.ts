@@ -13,14 +13,16 @@ import {
 	upcomingTasks,
 } from "./analytics";
 import { barChart, burndownChart, CATEGORY_COLOR, estimateChart, STATUS_COLORS, statusTrendChart } from "./charts";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { today } from "./store";
 import { isClosed, PRIORITIES, PRIORITY_LABELS, Project, STATUSES, STATUS_LABELS, Task, TaskStatus } from "./types";
 
 // Order of segments in stacked status bars: finished work first, then active, then waiting.
 const STACK_ORDER: TaskStatus[] = ["done", "failed", "in-progress", "todo"];
 
-export const VIEW_TYPE_DASHBOARD = "task-tracker-dashboard";
+export const VIEW_TYPE_DASHBOARD = "project-pulse-dashboard";
+
+const LIST_LIMIT = 6; // rows per "Needs attention" list
 
 // KPI accents as "r, g, b" (vault style: purple-led, each tile its own accent).
 const ACCENT = {
@@ -39,10 +41,10 @@ export class DashboardView extends ItemView {
 	private projectScope = "all"; // "all" or a project id
 	private charts: Chart[] = [];
 	private hasRendered = false;
-	private trendBy: TrendDate = "created"; // switch on the "status over time" chart
+	private trendBy: TrendDate = "due"; // switch on the "status over time" chart — first option = default
 	private trendChart: Chart | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 
@@ -87,7 +89,7 @@ export class DashboardView extends ItemView {
 
 		const seg = head.createDiv({ cls: "tt-seg", attr: { role: "group", "aria-label": "Place tasks by" } });
 		const body = card.createDiv();
-		const options: [TrendDate, string][] = [["created", "Created"], ["due", "Due"], ["completed", "Completed"]];
+		const options: [TrendDate, string][] = [["due", "Due"], ["completed", "Completed"], ["created", "Created"]];
 		const buttons = options.map(([value, label]) => {
 			const btn = seg.createEl("button", { cls: "tt-seg-btn", text: label });
 			btn.addEventListener("click", () => {
@@ -155,13 +157,15 @@ export class DashboardView extends ItemView {
 		const animate = !this.hasRendered;
 		this.hasRendered = true;
 
-		// Needs attention
+		// Needs attention — only lists with something in them get a card; an empty one becomes a slim "all clear" line.
 		const overdue = overdueTasks(tasks);
 		if (overdue.length || upcoming.length) {
 			section(root, "Needs attention");
+			if (!overdue.length) root.createDiv({ cls: "tt-all-clear", text: "✓ Nothing overdue — you're on track." });
 			const grid = root.createDiv({ cls: "tt-grid tt-grid-lists" });
-			this.taskListCard(grid, "Overdue", overdue, "Nothing overdue.", !project, "overdue");
-			this.taskListCard(grid, "Due in the next 7 days", upcoming, "Nothing due this week.", !project, "upcoming");
+			if (overdue.length) this.taskListCard(grid, "Overdue", overdue, "", !project, "overdue");
+			if (upcoming.length) this.taskListCard(grid, "Due in the next 7 days", upcoming, "", !project, "upcoming");
+			if (!upcoming.length) root.createDiv({ cls: "tt-all-clear", text: "✓ Nothing else due in the next 7 days." });
 		}
 
 		// Projects comparison
@@ -228,13 +232,17 @@ export class DashboardView extends ItemView {
 
 		// Time
 		section(root, "Time");
-		const timed = estimateVsSpent(tasks);
+		// Only tasks with tracked time — comparing estimates against 0h tells you nothing.
+		const timed = estimateVsSpent(tasks).filter((t) => t.spent > 0);
+		const estimated = tasks.filter((t) => t.estimate && !isClosed(t.status));
 		this.chartCard(
 			root,
 			"Estimate vs actual",
 			"Hours per task — red bars went over the estimate",
 			timed.length ? (c) => estimateChart(c, timed, animate) : null,
-			"Add estimates or track time with the ▶ timer to see this chart.",
+			estimated.length
+				? `No time tracked yet — ${summary.estimate}h estimated across ${estimated.length} task${estimated.length === 1 ? "" : "s"}. Track time with ▶ or 🍅 to compare.`
+				: "Add estimates and track time with ▶ or 🍅 to see this chart.",
 			timed.length > 5 ? "tt-chart-tall" : ""
 		);
 	}
@@ -391,7 +399,7 @@ export class DashboardView extends ItemView {
 		}
 		const list = card.createDiv({ cls: "tt-list" });
 		const now = moment(today());
-		for (const t of tasks.slice(0, 8)) {
+		for (const t of tasks.slice(0, LIST_LIMIT)) {
 			const item = list.createDiv({ cls: "tt-list-item" });
 			item.createSpan({ cls: `tt-dot tt-prio-dot-${t.priority}`, attr: { "aria-label": `${PRIORITY_LABELS[t.priority]} priority` } });
 			const text = item.createDiv({ cls: "tt-list-text" });
@@ -405,7 +413,7 @@ export class DashboardView extends ItemView {
 				attr: { "aria-label": t.due ?? "" },
 			});
 		}
-		if (tasks.length > 8) list.createDiv({ cls: "tt-list-more", text: `+ ${tasks.length - 8} more` });
+		if (tasks.length > LIST_LIMIT) list.createDiv({ cls: "tt-list-more", text: `+ ${tasks.length - LIST_LIMIT} more — see the Today view or task list` });
 	}
 
 	private openFile(file: TFile): void {

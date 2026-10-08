@@ -9,7 +9,7 @@ import { CalendarView, VIEW_TYPE_CALENDAR } from "./CalendarView";
 import { registerCodeBlock } from "./codeBlock";
 import { createWeeklyReview } from "./weeklyReview";
 import { ProjectModal } from "./ProjectModal";
-import { DEFAULT_SETTINGS, TaskTrackerSettings, TaskTrackerSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, ProjectPulseSettings, ProjectPulseSettingTab } from "./settings";
 import { TaskStore } from "./store";
 import { TaskListView, VIEW_TYPE_TASK_LIST } from "./TaskListView";
 import { TaskTimer } from "./timer";
@@ -18,8 +18,8 @@ import { PomodoroView, VIEW_TYPE_POMODORO } from "./PomodoroView";
 import { PomodoroStatsView, VIEW_TYPE_POMODORO_STATS } from "./PomodoroStatsView";
 import { Project, Task, TaskStatus } from "./types";
 
-export default class TaskTrackerPlugin extends Plugin {
-	settings: TaskTrackerSettings;
+export default class ProjectPulsePlugin extends Plugin {
+	settings: ProjectPulseSettings;
 	store: TaskStore;
 	timer: TaskTimer;
 	pomodoro: Pomodoro;
@@ -225,7 +225,7 @@ export default class TaskTrackerPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(new TaskTrackerSettingTab(this.app, this));
+		this.addSettingTab(new ProjectPulseSettingTab(this.app, this));
 
 		// Start listening after startup so the initial vault indexing doesn't flood events.
 		this.app.workspace.onLayoutReady(() => {
@@ -274,7 +274,7 @@ export default class TaskTrackerPlugin extends Plugin {
 			this.app.fileManager
 				.trashFile(file)
 				.then(() => new Notice(`Deleted "${file.basename}"`))
-				.catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "delete failed"}`));
+				.catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "delete failed"}`));
 		}).open();
 	}
 

@@ -1,14 +1,14 @@
 import { MarkdownPostProcessorContext, MarkdownRenderChild, moment, Notice, setIcon } from "obsidian";
 import { summarize, upcomingTasks } from "./analytics";
 import { taskBadges } from "./badges";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { formatClock } from "./pomodoro";
 import { today } from "./store";
 import { TaskSuggestModal } from "./TaskSuggestModal";
 import { isBlocked, isClosed, PRIORITY_RANK, Project, STATUS_LABELS, Task, TaskStatus } from "./types";
 
 /**
- * ```task-tracker
+ * ```project-pulse
  * view: tasks | today | stats | pomodoro   (optional, default tasks)
  * project: Study Docker   (optional — defaults to the note's own project, or all projects)
  * show: open | all        (optional, default open — tasks view only)
@@ -20,10 +20,13 @@ import { isBlocked, isClosed, PRIORITY_RANK, Project, STATUS_LABELS, Task, TaskS
  * - pomodoro: compact timer with start/pause/stop and today's 🍅 count
  * Everything updates live.
  */
-export function registerCodeBlock(plugin: TaskTrackerPlugin): void {
-	plugin.registerMarkdownCodeBlockProcessor("task-tracker", (source, el, ctx) => {
-		ctx.addChild(new TaskBlock(el, plugin, parseOptions(source), ctx));
-	});
+export function registerCodeBlock(plugin: ProjectPulsePlugin): void {
+	// "task-tracker" is the plugin's old name — still accepted so existing notes keep rendering.
+	for (const lang of ["project-pulse", "task-tracker"]) {
+		plugin.registerMarkdownCodeBlockProcessor(lang, (source, el, ctx) => {
+			ctx.addChild(new TaskBlock(el, plugin, parseOptions(source), ctx));
+		});
+	}
 }
 
 type BlockView = "tasks" | "today" | "stats" | "pomodoro";
@@ -59,7 +62,7 @@ class TaskBlock extends MarkdownRenderChild {
 
 	constructor(
 		el: HTMLElement,
-		private plugin: TaskTrackerPlugin,
+		private plugin: ProjectPulsePlugin,
 		private opts: BlockOptions,
 		private ctx: MarkdownPostProcessorContext
 	) {
@@ -96,7 +99,7 @@ class TaskBlock extends MarkdownRenderChild {
 
 		const project = this.project();
 		if (project === "missing") {
-			el.createDiv({ cls: "tt-block-empty", text: `Task Tracker: no project named "${this.opts.project}".` });
+			el.createDiv({ cls: "tt-block-empty", text: `Project Pulse: no project named "${this.opts.project}".` });
 			return;
 		}
 		const tasks = this.plugin.store.getTasks().filter((t) => !project || t.project?.id === project.id);
@@ -291,7 +294,7 @@ class TaskBlock extends MarkdownRenderChild {
 		if (t.status === "done") setIcon(check, "check");
 		check.disabled = isClosed(t.status);
 		check.addEventListener("click", () =>
-			this.plugin.store.setStatus(t.file, "done").catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`))
+			this.plugin.store.setStatus(t.file, "done").catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`))
 		);
 		row.createSpan({ cls: `tt-dot tt-prio-dot-${t.priority}` });
 		const text = row.createDiv({ cls: "tt-today-text" });

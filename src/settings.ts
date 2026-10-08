@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 
-export interface TaskTrackerSettings {
+export interface ProjectPulseSettings {
 	newProjectsFolder: string; // "New project" creates <folder>/<name>/<name>.md
 	tasksSubfolder: string; // task notes go to <project folder>/<tasksSubfolder>/
 	reviewsFolder: string; // where weekly review notes are created
@@ -47,10 +47,10 @@ export interface ActiveTimer {
 	start: string; // ISO date-time
 }
 
-export const DEFAULT_SETTINGS: TaskTrackerSettings = {
-	newProjectsFolder: "Task Tracker",
+export const DEFAULT_SETTINGS: ProjectPulseSettings = {
+	newProjectsFolder: "Project Pulse",
 	tasksSubfolder: "Tasks",
-	reviewsFolder: "Task Tracker/Reviews",
+	reviewsFolder: "Project Pulse/Reviews",
 	dailyBudget: 4,
 	activeTimer: null,
 	pomodoroFocus: 25,
@@ -73,10 +73,10 @@ export const DEFAULT_SETTINGS: TaskTrackerSettings = {
 	pomodoroSessions: [],
 };
 
-export class TaskTrackerSettingTab extends PluginSettingTab {
-	plugin: TaskTrackerPlugin;
+export class ProjectPulseSettingTab extends PluginSettingTab {
+	plugin: ProjectPulsePlugin;
 
-	constructor(app: App, plugin: TaskTrackerPlugin) {
+	constructor(app: App, plugin: ProjectPulsePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

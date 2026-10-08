@@ -1,6 +1,6 @@
 import { ItemView, moment, Notice, setIcon, WorkspaceLeaf } from "obsidian";
 import { isOverdue } from "./analytics";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { taskBadges } from "./badges";
 import { timerButton } from "./timer";
 import { today } from "./store";
@@ -17,7 +17,7 @@ import {
 	TaskStatus,
 } from "./types";
 
-export const VIEW_TYPE_TASK_LIST = "task-tracker-list";
+export const VIEW_TYPE_TASK_LIST = "project-pulse-list";
 
 type StatusFilter = "all" | "open" | TaskStatus;
 type SortKey = "due" | "priority" | "status" | "time" | "created" | "title";
@@ -67,7 +67,7 @@ export class TaskListView extends ItemView {
 	private subEl: HTMLElement | null = null;
 	private sortSelect: HTMLSelectElement | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 
@@ -389,7 +389,7 @@ export class TaskListView extends ItemView {
 
 	private save(p: Promise<void>): void {
 		// The store's "changed" event re-renders the list once the note is saved.
-		p.catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`));
+		p.catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`));
 	}
 }
 

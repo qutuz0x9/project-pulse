@@ -62,7 +62,7 @@ export class TaskModal extends Modal {
 		this.setTitle(this.task ? "Edit task" : "New task");
 
 		if (projects.length === 0) {
-			contentEl.createEl("p", { text: "No projects yet. Run \"Task Tracker: New project\" or \"Mark current note as project\" first." });
+			contentEl.createEl("p", { text: "No projects yet. Run \"Project Pulse: New project\" or \"Mark current note as project\" first." });
 			return;
 		}
 		this.project ??= projects[0];

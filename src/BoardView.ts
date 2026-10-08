@@ -1,6 +1,6 @@
 import { ItemView, Menu, moment, Notice, setIcon, WorkspaceLeaf } from "obsidian";
 import { isOverdue } from "./analytics";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { today } from "./store";
 import { taskBadges } from "./badges";
 import { timerButton } from "./timer";
@@ -18,10 +18,10 @@ import {
 	TaskStatus,
 } from "./types";
 
-export const VIEW_TYPE_BOARD = "task-tracker-board";
+export const VIEW_TYPE_BOARD = "project-pulse-board";
 
 // Data type used to carry the dragged task's path between drag events.
-const DRAG_TYPE = "text/task-tracker-path";
+const DRAG_TYPE = "text/project-pulse-path";
 
 // Done / Failed columns show this many cards until "Show all" is clicked.
 const CLOSED_LIMIT = 8;
@@ -38,7 +38,7 @@ export class BoardView extends ItemView {
 	private boardEl: HTMLElement | null = null;
 	private subEl: HTMLElement | null = null;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 
@@ -332,7 +332,7 @@ export class BoardView extends ItemView {
 	private moveTask(task: Task, status: TaskStatus): void {
 		this.plugin.store
 			.setStatus(task.file, status)
-			.catch((e) => new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`));
+			.catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`));
 	}
 }
 

@@ -5,11 +5,11 @@ import listPlugin from "@fullcalendar/list";
 import multiMonthPlugin from "@fullcalendar/multimonth";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { ItemView, moment, Notice, WorkspaceLeaf } from "obsidian";
-import type TaskTrackerPlugin from "./main";
+import type ProjectPulsePlugin from "./main";
 import { today } from "./store";
 import { FM, isClosed, Task } from "./types";
 
-export const VIEW_TYPE_CALENDAR = "task-tracker-calendar";
+export const VIEW_TYPE_CALENDAR = "project-pulse-calendar";
 
 type EventKind = "scheduled" | "due" | "logged";
 
@@ -26,7 +26,7 @@ export class CalendarView extends ItemView {
 	private showDue = true;
 	private showLogged = true;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskTrackerPlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
 	}
 
@@ -259,7 +259,7 @@ export class CalendarView extends ItemView {
 		}
 		save.catch((e) => {
 			info.revert();
-			new Notice(`Task Tracker: ${e instanceof Error ? e.message : "save failed"}`);
+			new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`);
 		});
 	}
 
