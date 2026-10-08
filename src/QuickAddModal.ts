@@ -13,7 +13,7 @@ export class QuickAddModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		this.modalEl.addClass("tt-quickadd");
+		this.modalEl.addClass("tt-quickadd", "tt-modal");
 		this.setTitle("Quick add task");
 
 		const input = contentEl.createEl("input", {

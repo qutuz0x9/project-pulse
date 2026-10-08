@@ -13,6 +13,7 @@ export class ConfirmModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("tt-modal"); // shared button interactions (styles.css)
 		this.setTitle(this.heading);
 		this.contentEl.createEl("p", { text: this.message });
 		new Setting(this.contentEl)

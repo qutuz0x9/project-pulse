@@ -16,6 +16,7 @@ export class ProjectModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("tt-modal"); // shared button interactions (styles.css)
 		const { contentEl } = this;
 		this.setTitle(this.heading);
 

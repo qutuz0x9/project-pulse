@@ -5,6 +5,7 @@ export interface TaskTrackerSettings {
 	newProjectsFolder: string; // "New project" creates <folder>/<name>/<name>.md
 	tasksSubfolder: string; // task notes go to <project folder>/<tasksSubfolder>/
 	reviewsFolder: string; // where weekly review notes are created
+	dailyBudget: number; // hours of work planned per day (Today view "Planned today" bar)
 	activeTimer: ActiveTimer | null; // runtime state (not shown in the settings tab), saved so it survives restarts
 	pomodoroFocus: number; // minutes
 	pomodoroShortBreak: number; // minutes
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: TaskTrackerSettings = {
 	newProjectsFolder: "Task Tracker",
 	tasksSubfolder: "Tasks",
 	reviewsFolder: "Task Tracker/Reviews",
+	dailyBudget: 4,
 	activeTimer: null,
 	pomodoroFocus: 25,
 	pomodoroShortBreak: 5,
@@ -121,6 +123,23 @@ export class TaskTrackerSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Daily budget")
+			.setDesc("Hours of work you plan per day — the Today view compares what's due and scheduled against it.")
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.inputEl.min = "0.5";
+				text.inputEl.step = "0.5";
+				text
+					.setPlaceholder(String(DEFAULT_SETTINGS.dailyBudget))
+					.setValue(String(this.plugin.settings.dailyBudget))
+					.onChange(async (value) => {
+						const n = Number(value);
+						this.plugin.settings.dailyBudget = Number.isFinite(n) && n > 0 ? n : DEFAULT_SETTINGS.dailyBudget;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		new Setting(containerEl).setName("Pomodoro").setHeading();
 

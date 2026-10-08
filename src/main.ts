@@ -289,6 +289,10 @@ export default class TaskTrackerPlugin extends Plugin {
 		await workspace.revealLeaf(leaf);
 	}
 
+	openCalendarView(): Promise<void> {
+		return this.activateView(VIEW_TYPE_CALENDAR);
+	}
+
 	openTodayView(): Promise<void> {
 		return this.activateView(VIEW_TYPE_TODAY);
 	}

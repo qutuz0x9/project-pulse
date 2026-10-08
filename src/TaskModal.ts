@@ -56,6 +56,7 @@ export class TaskModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("tt-modal"); // shared button interactions (styles.css)
 		const { contentEl } = this;
 		const projects = this.store.getProjects();
 		this.setTitle(this.task ? "Edit task" : "New task");
