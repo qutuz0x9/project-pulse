@@ -43,6 +43,7 @@ export default class TaskTrackerPlugin extends Plugin {
 		this.addRibbonIcon("layout-dashboard", "Open task dashboard", () => this.activateView(VIEW_TYPE_DASHBOARD));
 		this.addRibbonIcon("kanban", "Open task board", () => this.activateView(VIEW_TYPE_BOARD));
 		this.addRibbonIcon("timer", "Open Pomodoro", () => this.activatePomodoroView());
+		this.addRibbonIcon("trending-up", "Open Pomodoro statistics", () => this.openPomodoroStats());
 		this.addRibbonIcon("sun", "Open Today", () => this.activateView(VIEW_TYPE_TODAY));
 		this.addRibbonIcon("calendar-days", "Open task calendar", () => this.activateView(VIEW_TYPE_CALENDAR));
 
@@ -286,6 +287,10 @@ export default class TaskTrackerPlugin extends Plugin {
 			await leaf.setViewState({ type: VIEW_TYPE_POMODORO, active: true });
 		}
 		await workspace.revealLeaf(leaf);
+	}
+
+	openTodayView(): Promise<void> {
+		return this.activateView(VIEW_TYPE_TODAY);
 	}
 
 	openPomodoroStats(): Promise<void> {

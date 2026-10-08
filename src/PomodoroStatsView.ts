@@ -38,7 +38,7 @@ export class PomodoroStatsView extends ItemView {
 	}
 
 	getIcon(): string {
-		return "bar-chart-3";
+		return "trending-up";
 	}
 
 	async onOpen(): Promise<void> {
