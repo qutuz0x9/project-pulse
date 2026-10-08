@@ -2015,3 +2015,93 @@
 	.tt-steps { padding-left: 20px; }
 }
 .tt-today-back { display: inline-block; margin-top: 10px; }
+
+/* ---------- Task list: chips, sortable headers, groups, quiet pills ---------- */
+.tt-list-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+.tt-list-chip {
+	padding: 1px 9px;
+	border-radius: 999px;
+	font-size: 0.78em;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	background: var(--background-modifier-border);
+}
+.tt-list-chip.is-late { color: #f87171; background: rgba(220, 38, 38, 0.16); }
+.tt-list-chip.is-blocked { color: #f0a63a; background: rgba(192, 131, 6, 0.18); }
+.theme-light .tt-list-chip.is-late { color: #b91c1c; }
+.theme-light .tt-list-chip.is-blocked { color: #8a5d00; }
+.tt-filters-spacer { flex: 1; }
+
+/* Sortable column headers */
+.tt-list-view .tt-th-sort {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: auto;
+	padding: 2px 6px;
+	margin-left: -6px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	box-shadow: none;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+.tt-list-view .tt-th-sort:hover { color: var(--text-normal); }
+.tt-list-view .tt-th-sort.is-active { color: rgb(199, 125, 255); }
+.theme-light .tt-list-view .tt-th-sort.is-active { color: #7b2cbf; }
+.tt-th-arrow { font-size: 0.85em; }
+
+/* Group header rows */
+.tt-group-row td {
+	padding: 0 !important;
+	background: rgba(155, 93, 229, 0.06);
+	border-top: 1px solid var(--background-modifier-border);
+}
+.tt-list-view .tt-group-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	height: auto;
+	padding: 8px 14px;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	font-size: 0.72em;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+.tt-list-view .tt-group-toggle:hover { color: var(--text-normal); transform: none; }
+.tt-group-caret { width: 10px; letter-spacing: 0; }
+.tt-group-count {
+	padding: 0 7px;
+	border-radius: 999px;
+	letter-spacing: 0;
+	background: var(--background-modifier-border);
+}
+
+/* Quiet pills: look like labels, show the dropdown arrow only on hover/focus */
+.tt-list-view select.tt-pill:not(:hover):not(:focus) {
+	background-image: none;
+	padding-right: 10px;
+}
+.tt-list-view select.tt-pill { cursor: pointer; transition: padding 0.12s ease; }
+
+/* Blocked rows read as "waiting" */
+.tt-list-view .tt-row.is-blocked .tt-title,
+.tt-list-view .tt-row.is-blocked .tt-pill,
+.tt-list-view .tt-row.is-blocked .tt-due-badge { opacity: 0.6; }
