@@ -3,6 +3,7 @@ import { ItemView, moment, setIcon, WorkspaceLeaf } from "obsidian";
 import { barChart } from "./charts";
 import type ProjectPulsePlugin from "./main";
 import {
+	allTimeStats,
 	dailyMinutes,
 	focusByTask,
 	formatMinutes,
@@ -72,7 +73,8 @@ export class PomodoroStatsView extends ItemView {
 		const heading = header.createDiv({ cls: "tt-dash-heading" });
 		heading.createDiv({ cls: "tt-dash-eyebrow", text: "Pomodoro" });
 		heading.createEl("h2", { cls: "tt-dash-title", text: "Statistics" });
-		heading.createDiv({ cls: "tt-dash-sub", text: `${sessions.length} focus session${sessions.length === 1 ? "" : "s"} recorded` });
+		const recorded = sessions.length + this.plugin.settings.pomodoroArchive.sessions;
+		heading.createDiv({ cls: "tt-dash-sub", text: `${recorded} focus session${recorded === 1 ? "" : "s"} recorded` });
 		const controls = header.createDiv({ cls: "tt-dash-controls" });
 		const openPanel = controls.createEl("button", { cls: "mod-cta", text: "Open Pomodoro" });
 		openPanel.addEventListener("click", () => this.plugin.activatePomodoroView());
@@ -88,7 +90,7 @@ export class PomodoroStatsView extends ItemView {
 		// Overview: today vs yesterday, streak, total
 		const todayStats = periodStats(onDay(sessions, today()));
 		const yesterdayStats = periodStats(onDay(sessions, moment().subtract(1, "day").format("YYYY-MM-DD")));
-		const all = periodStats(sessions);
+		const all = allTimeStats(sessions, this.plugin.settings.pomodoroArchive);
 		const tiles = root.createDiv({ cls: "tt-kpis" });
 		tile(tiles, "Today's pomodoros", `${todayStats.pomodoros}`, compare(todayStats.pomodoros - yesterdayStats.pomodoros, (n) => `${n}`), ACCENT.purple);
 		tile(tiles, "Today's focus", formatMinutes(todayStats.minutes), compare(todayStats.minutes - yesterdayStats.minutes, formatMinutes), ACCENT.blue);
@@ -183,7 +185,7 @@ function compare(diff: number, fmt: (n: number) => string): { text: string; tone
 
 function tile(parent: HTMLElement, label: string, value: string, sub: { text: string; tone: string }, accent: string): void {
 	const t = parent.createDiv({ cls: "tt-kpi" });
-	t.setAttr("style", `--c: ${accent}`);
+	t.setCssProps({ "--c": accent });
 	t.createDiv({ cls: "tt-kpi-label", text: label });
 	t.createDiv({ cls: "tt-kpi-value", text: value });
 	t.createDiv({ cls: `tt-kpi-sub ${sub.tone}`.trim(), text: sub.text });

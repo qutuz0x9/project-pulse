@@ -20,7 +20,6 @@ import {
 	Project,
 	STATUSES,
 	Task,
-	TASK_TAG,
 	TaskPriority,
 	TaskStatus,
 } from "./types";
@@ -39,6 +38,11 @@ export class TaskStore extends Events {
 		super();
 	}
 
+	/** The tag that marks a note as a task, without a leading "#" (setting). */
+	private taskTag(): string {
+		return this.settings.taskTag.replace(/^#/, "");
+	}
+
 	// Called by the plugin on file create/edit/delete/rename.
 	onFileChanged(file: TFile): void {
 		if (file.extension !== "md") return;
@@ -53,7 +57,7 @@ export class TaskStore extends Events {
 	getProjects(): Project[] {
 		const projects: Project[] = [];
 		for (const file of this.app.vault.getMarkdownFiles()) {
-			const value = this.app.metadataCache.getFileCache(file)?.frontmatter?.[FM.trackerProject];
+			const value = this.app.metadataCache.getFileCache(file)?.frontmatter?.[this.settings.projectProperty];
 			if (!value) continue;
 			const name = typeof value === "string" && value.trim() ? value.trim() : file.basename;
 			projects.push({ id: file.path, name, folder: file.parent?.path ?? "", file });
@@ -86,7 +90,7 @@ export class TaskStore extends Events {
 	}
 
 	isProject(file: TFile): boolean {
-		return !!this.app.metadataCache.getFileCache(file)?.frontmatter?.[FM.trackerProject];
+		return !!this.app.metadataCache.getFileCache(file)?.frontmatter?.[this.settings.projectProperty];
 	}
 
 	isTask(file: TFile): boolean {
@@ -95,7 +99,7 @@ export class TaskStore extends Events {
 	}
 
 	private isTaskFrontmatter(fm: FrontMatterCache): boolean {
-		return (parseFrontMatterTags(fm) ?? []).includes("#" + TASK_TAG);
+		return (parseFrontMatterTags(fm) ?? []).includes("#" + this.taskTag());
 	}
 
 	private toTask(file: TFile, fm: FrontMatterCache, projects: Project[]): Task {
@@ -103,7 +107,7 @@ export class TaskStore extends Events {
 			file,
 			title: file.basename,
 			project: this.resolveProject(file, fm[FM.project], projects),
-			status: oneOf(fm[FM.status], STATUSES, "todo"),
+			status: oneOf(fm[this.settings.statusProperty], STATUSES, "todo"),
 			priority: oneOf(fm[FM.priority], PRIORITIES, "medium"),
 			due: toDate(fm[FM.due]),
 			created: toDate(fm[FM.created]),
@@ -171,14 +175,14 @@ export class TaskStore extends Events {
 
 	async markAsProject(file: TFile, name: string): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm[FM.trackerProject] = name;
+			fm[this.settings.projectProperty] = name;
 		});
 	}
 
 	/** Removes the property only; its task notes stay untouched. */
 	async unmarkProject(file: TFile): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			delete fm[FM.trackerProject];
+			delete fm[this.settings.projectProperty];
 		});
 	}
 
@@ -192,9 +196,9 @@ export class TaskStore extends Events {
 		const file = await this.app.vault.create(path, body);
 		const projectLink = `[[${input.project.file.basename}]]`;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm.tags = [TASK_TAG];
+			fm.tags = [this.taskTag()];
 			fm[FM.project] = projectLink;
-			fm[FM.status] = input.status;
+			fm[this.settings.statusProperty] = input.status;
 			fm[FM.priority] = input.priority;
 			fm[FM.due] = input.due ?? "";
 			fm[FM.created] = today();
@@ -215,7 +219,7 @@ export class TaskStore extends Events {
 		const file = task.file;
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm[FM.project] = `[[${input.project.file.basename}]]`;
-			fm[FM.status] = input.status;
+			fm[this.settings.statusProperty] = input.status;
 			fm[FM.completed] = isClosed(input.status) ? fm[FM.completed] || today() : "";
 			fm[FM.priority] = input.priority;
 			fm[FM.due] = input.due ?? "";
@@ -266,7 +270,7 @@ export class TaskStore extends Events {
 		const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
 		if (!fm || !this.isTaskFrontmatter(fm) || fm[FM.next] || this.spawning.has(file.path)) return;
 		const rule = parseRepeat(fm[FM.repeat]);
-		if (!rule || !isClosed(oneOf(fm[FM.status], STATUSES, "todo"))) return;
+		if (!rule || !isClosed(oneOf(fm[this.settings.statusProperty], STATUSES, "todo"))) return;
 
 		const task = this.getTasks().find((t) => t.file.path === file.path);
 		if (!task?.project) return; // a copy needs a project to live in
@@ -302,7 +306,7 @@ export class TaskStore extends Events {
 
 	async setStatus(file: TFile, status: TaskStatus): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
-			fm[FM.status] = status;
+			fm[this.settings.statusProperty] = status;
 			fm[FM.completed] = isClosed(status) ? fm[FM.completed] || today() : "";
 		});
 	}
@@ -348,7 +352,7 @@ export class TaskStore extends Events {
 		const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
 		if (!fm || !this.isTaskFrontmatter(fm)) return;
 
-		const closed = isClosed(oneOf(fm[FM.status], STATUSES, "todo"));
+		const closed = isClosed(oneOf(fm[this.settings.statusProperty], STATUSES, "todo"));
 		const hasCompleted = !!toDate(fm[FM.completed]);
 		if (closed !== hasCompleted) {
 			this.app.fileManager

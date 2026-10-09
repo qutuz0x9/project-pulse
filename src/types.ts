@@ -1,6 +1,5 @@
 import { TFile } from "obsidian";
 
-export const TASK_TAG = "type/task";
 
 export const STATUSES = ["todo", "in-progress", "done", "failed"] as const;
 export type TaskStatus = (typeof STATUSES)[number];
@@ -29,10 +28,10 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
 
 // Frontmatter keys written to each task note.
 // `task-status` (not `status`) because the vault already uses `status` for learning state.
+// Fixed property names. The task tag, status property and project property are settings
+// (taskTag / statusProperty / projectProperty) so other vaults can use their own conventions.
 export const FM = {
-	trackerProject: "tracker-project", // on project notes: the project's display name
 	project: "project",
-	status: "task-status",
 	priority: "priority",
 	due: "due",
 	created: "created",

@@ -2130,3 +2130,14 @@
 }
 .tt-dash .tt-list-item .tt-title:hover { color: rgb(199, 125, 255); }
 .theme-light .tt-dash .tt-list-item .tt-title:hover { color: #7b2cbf; }
+
+/* ---------- Dynamic values come in as CSS variables (set with setCssProps), never inline styles ---------- */
+.tt-progress-fill,
+.tt-time-fill,
+.tt-checklist-fill { width: var(--tt-pct, 0%); }
+.tt-stackbar-seg { flex: var(--tt-flex, 1); }
+/* Status colors for legend dots and stacked-bar segments */
+.tt-status-bg-todo { background: #9ca3af; }
+.tt-status-bg-in-progress { background: #9b5de5; }
+.tt-status-bg-done { background: #0d9488; }
+.tt-status-bg-failed { background: #e5484d; }

@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-project-pulse",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "Obsidian plugin: projects and tasks as notes, with dashboard, board, calendar, Pomodoro and analytics",
 	"main": "main.js",
 	"type": "module",

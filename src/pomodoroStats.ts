@@ -1,5 +1,5 @@
 import { moment } from "obsidian";
-import type { PomodoroSession } from "./settings";
+import type { PomodoroArchive, PomodoroSession } from "./settings";
 import { today } from "./store";
 
 // Pure calculations over the Pomodoro session history — no DOM, no charts.
@@ -21,6 +21,19 @@ export function periodStats(sessions: PomodoroSession[]): PeriodStats {
 		minutes,
 		avgMinutes: sessions.length ? Math.round(minutes / sessions.length) : 0,
 		completion: sessions.length ? Math.round((pomodoros / sessions.length) * 100) : 0,
+	};
+}
+
+/** All-time stats: the detailed history plus the totals of older, archived sessions. */
+export function allTimeStats(sessions: PomodoroSession[], archive: PomodoroArchive): PeriodStats {
+	const count = sessions.length + archive.sessions;
+	const minutes = sessions.reduce((a, s) => a + s.minutes, 0) + archive.minutes;
+	const pomodoros = sessions.filter((s) => s.completed).length + archive.pomodoros;
+	return {
+		pomodoros,
+		minutes,
+		avgMinutes: count ? Math.round(minutes / count) : 0,
+		completion: count ? Math.round((pomodoros / count) * 100) : 0,
 	};
 }
 

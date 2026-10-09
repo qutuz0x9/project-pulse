@@ -1,7 +1,7 @@
 {
 	"id": "project-pulse",
 	"name": "Project Pulse",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.7.2",
 	"description": "Projects and tasks as notes, with a dashboard, Kanban board, calendar, Today view, Pomodoro timer and progress analytics.",
 	"author": "qutuz0x9",

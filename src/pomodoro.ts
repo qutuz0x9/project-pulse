@@ -4,6 +4,9 @@ import type ProjectPulsePlugin from "./main";
 import type { PomodoroPhase, PomodoroState } from "./settings";
 import { today } from "./store";
 
+// ~3,000 sessions ≈ a year of heavy daily use, well under 1 MB of saved data.
+const MAX_SESSIONS = 3000;
+
 /**
  * Pomodoro engine: focus → break (starts by itself) → waits for "Start focus".
  * State lives in the plugin's saved data, so a restart keeps it; a session that ended while
@@ -254,9 +257,25 @@ export class Pomodoro extends Events {
 				title: file.basename,
 				completed: full,
 			});
+			this.trimHistory();
 			if (!full) new Notice(`Logged ${Math.floor(focusMs / 60_000)} min on ${file.basename}`);
 		} catch (e) {
 			new Notice(`Project Pulse: couldn't save focus time — ${e instanceof Error ? e.message : "unknown error"}`);
+		}
+	}
+
+	/**
+	 * Keeps data.json small: only the newest MAX_SESSIONS sessions stay in full detail;
+	 * older ones are folded into `pomodoroArchive` totals so all-time numbers stay correct.
+	 */
+	private trimHistory(): void {
+		const s = this.plugin.settings;
+		if (s.pomodoroSessions.length <= MAX_SESSIONS) return;
+		s.pomodoroSessions.sort((a, b) => a.start.localeCompare(b.start));
+		for (const old of s.pomodoroSessions.splice(0, s.pomodoroSessions.length - MAX_SESSIONS)) {
+			s.pomodoroArchive.sessions += 1;
+			s.pomodoroArchive.minutes += old.minutes;
+			if (old.completed) s.pomodoroArchive.pomodoros += 1;
 		}
 	}
 

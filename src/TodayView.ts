@@ -121,7 +121,7 @@ export class TodayView extends ItemView {
 		const row = root.createDiv({ cls: "tt-kpis tt-today-kpis" });
 		const p = tile(row, "Planned today", `${hours}h`, over ? "220, 38, 38" : "155, 93, 229");
 		const bar = p.createDiv({ cls: "tt-progress" });
-		bar.createDiv({ cls: `tt-progress-fill${over ? " is-over" : ""}` }).setAttr("style", `width: ${Math.min(100, (hours / budget) * 100)}%`);
+		bar.createDiv({ cls: `tt-progress-fill${over ? " is-over" : ""}` }).setCssProps({ "--tt-pct": `${Math.min(100, (hours / budget) * 100)}%` });
 		p.createDiv({
 			cls: "tt-kpi-sub",
 			text: `of ${budget}h budget${over ? " · too much — move something" : ""}${unknown ? ` · ${unknown} without estimate (1h each)` : ""}`,
@@ -463,7 +463,7 @@ export class TodayView extends ItemView {
 
 function tile(parent: HTMLElement, label: string, value: string, accent: string): HTMLElement {
 	const t = parent.createDiv({ cls: "tt-kpi" });
-	t.setAttr("style", `--c: ${accent}`);
+	t.setCssProps({ "--c": accent });
 	t.createDiv({ cls: "tt-kpi-label", text: label });
 	t.createDiv({ cls: "tt-kpi-value", text: value });
 	return t;

@@ -305,7 +305,7 @@ export class TaskListView extends ItemView {
 				timeCell
 					.createDiv({ cls: "tt-time-bar" })
 					.createDiv({ cls: `tt-time-fill${over ? " is-over" : ""}` })
-					.setAttr("style", `width: ${Math.min(100, Math.round((task.spent / task.estimate) * 100))}%`);
+					.setCssProps({ "--tt-pct": `${Math.min(100, Math.round((task.spent / task.estimate) * 100))}%` });
 			}
 		} else if (task.estimate) {
 			timeCell.createSpan({ cls: "tt-num tt-muted", text: `${task.estimate}h`, attr: { "aria-label": "Estimate — no time logged yet" } });

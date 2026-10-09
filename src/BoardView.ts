@@ -227,10 +227,7 @@ export class BoardView extends ItemView {
 			time.createSpan({ cls: "tt-num", text: `${task.spent}${task.estimate ? `/${task.estimate}` : ""}h` });
 			if (task.estimate) {
 				const bar = time.createDiv({ cls: "tt-time-bar" });
-				bar.createDiv({ cls: `tt-time-fill${task.spent > task.estimate ? " is-over" : ""}` }).setAttr(
-					"style",
-					`width: ${Math.min(100, Math.round((task.spent / task.estimate) * 100))}%`
-				);
+				bar.createDiv({ cls: `tt-time-fill${task.spent > task.estimate ? " is-over" : ""}` }).setCssProps({ "--tt-pct": `${Math.min(100, Math.round((task.spent / task.estimate) * 100))}%` });
 			}
 		}
 		if (task.pomodoros > 0) foot.createSpan({ cls: "tt-kcard-pomos", text: `🍅 ${task.pomodoros}` });

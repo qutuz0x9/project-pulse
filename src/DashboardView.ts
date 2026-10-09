@@ -295,13 +295,10 @@ export class DashboardView extends ItemView {
 		const legend = detail.createDiv({ cls: "tt-legend" });
 		for (const st of STACK_ORDER) {
 			if (s.byStatus[st]) {
-				bar.createDiv({ cls: "tt-stackbar-seg" }).setAttr(
-					"style",
-					`flex: ${s.byStatus[st]}; background: ${STATUS_COLORS[st]}`
-				);
+				bar.createDiv({ cls: `tt-stackbar-seg tt-status-bg-${st}` }).setCssProps({ "--tt-flex": String(s.byStatus[st]) });
 			}
 			const item = legend.createSpan({ cls: "tt-legend-item" });
-			item.createSpan({ cls: "tt-legend-dot" }).setAttr("style", `background: ${STATUS_COLORS[st]}`);
+			item.createSpan({ cls: `tt-legend-dot tt-status-bg-${st}` });
 			item.appendText(`${STATUS_LABELS[st]} ${s.byStatus[st]}`);
 		}
 
@@ -319,7 +316,7 @@ export class DashboardView extends ItemView {
 			const pct = Math.min(100, Math.round((s.spent / s.estimate) * 100));
 			const over = s.spent > s.estimate;
 			const track = hours.createDiv({ cls: "tt-progress" });
-			track.createDiv({ cls: `tt-progress-fill${over ? " is-over" : ""}` }).setAttr("style", `width: ${pct}%`);
+			track.createDiv({ cls: `tt-progress-fill${over ? " is-over" : ""}` }).setCssProps({ "--tt-pct": `${pct}%` });
 			hours.createDiv({ cls: "tt-kpi-sub", text: `of ${s.estimate}h estimated${over ? " · over budget" : ""}` });
 		} else {
 			hours.createDiv({ cls: "tt-kpi-sub", text: "no estimates yet" });
@@ -343,7 +340,7 @@ export class DashboardView extends ItemView {
 			row.createSpan({ cls: "tt-prow-name", text: name });
 			const bar = row.createDiv({ cls: "tt-stackbar" });
 			for (const st of STACK_ORDER) {
-				if (s.byStatus[st]) bar.createDiv({ cls: "tt-stackbar-seg" }).setAttr("style", `flex: ${s.byStatus[st]}; background: ${STATUS_COLORS[st]}`);
+				if (s.byStatus[st]) bar.createDiv({ cls: `tt-stackbar-seg tt-status-bg-${st}` }).setCssProps({ "--tt-flex": String(s.byStatus[st]) });
 			}
 			row.createSpan({ cls: "tt-num", text: `${s.byStatus.done}/${s.total} · ${s.progress}%` });
 			row.createSpan({ cls: `tt-num${s.overdue ? " tt-overdue" : " tt-muted"}`, text: s.overdue ? `${s.overdue}` : "—" });
@@ -427,7 +424,7 @@ function section(parent: HTMLElement, label: string): void {
 
 function kpi(parent: HTMLElement, label: string, value: string, accent: string): HTMLElement {
 	const tile = parent.createDiv({ cls: "tt-kpi" });
-	tile.setAttr("style", `--c: ${accent}`);
+	tile.setCssProps({ "--c": accent });
 	tile.createDiv({ cls: "tt-kpi-label", text: label });
 	tile.createDiv({ cls: "tt-kpi-value", text: value });
 	return tile;

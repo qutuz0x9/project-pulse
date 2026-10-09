@@ -2,6 +2,9 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import type ProjectPulsePlugin from "./main";
 
 export interface ProjectPulseSettings {
+	taskTag: string; // tag that marks a note as a task (no "#")
+	statusProperty: string; // frontmatter property holding todo / in-progress / done / failed
+	projectProperty: string; // frontmatter property that makes a note a project (value = display name)
 	newProjectsFolder: string; // "New project" creates <folder>/<name>/<name>.md
 	tasksSubfolder: string; // task notes go to <project folder>/<tasksSubfolder>/
 	reviewsFolder: string; // where weekly review notes are created
@@ -14,8 +17,30 @@ export interface ProjectPulseSettings {
 	pomodoroSound: boolean;
 	pomodoroSystemNotify: boolean;
 	pomodoro: PomodoroState; // runtime state (not shown in the settings tab)
-	pomodoroSessions: PomodoroSession[]; // focus session history for statistics
+	pomodoroSessions: PomodoroSession[]; // focus session history for statistics (newest MAX_SESSIONS kept)
+	pomodoroArchive: PomodoroArchive; // totals of older sessions trimmed from the history, so all-time stats stay right
+	ribbonIcons: Record<RibbonKey, boolean>; // which sidebar icons are shown
 }
+
+/** Totals of focus sessions that were trimmed from `pomodoroSessions`. */
+export interface PomodoroArchive {
+	sessions: number;
+	pomodoros: number;
+	minutes: number;
+}
+
+export type RibbonKey = "today" | "dashboard" | "board" | "list" | "calendar" | "pomodoro" | "stats";
+
+/** Sidebar icons in display order, with their labels for the settings tab. */
+export const RIBBON_ITEMS: [RibbonKey, string][] = [
+	["today", "Today"],
+	["dashboard", "Dashboard"],
+	["board", "Board"],
+	["list", "Task list"],
+	["calendar", "Calendar"],
+	["pomodoro", "Pomodoro"],
+	["stats", "Pomodoro statistics"],
+];
 
 export type PomodoroPhase = "idle" | "focus" | "short-break" | "long-break";
 
@@ -48,6 +73,9 @@ export interface ActiveTimer {
 }
 
 export const DEFAULT_SETTINGS: ProjectPulseSettings = {
+	taskTag: "type/task",
+	statusProperty: "task-status",
+	projectProperty: "tracker-project",
 	newProjectsFolder: "Project Pulse",
 	tasksSubfolder: "Tasks",
 	reviewsFolder: "Project Pulse/Reviews",
@@ -71,6 +99,9 @@ export const DEFAULT_SETTINGS: ProjectPulseSettings = {
 		nextFocusMs: null,
 	},
 	pomodoroSessions: [],
+	pomodoroArchive: { sessions: 0, pomodoros: 0, minutes: 0 },
+	// New installs start with the three main views; the rest are one toggle away.
+	ribbonIcons: { today: true, dashboard: true, board: true, list: false, calendar: false, pomodoro: false, stats: false },
 };
 
 export class ProjectPulseSettingTab extends PluginSettingTab {
@@ -84,6 +115,43 @@ export class ProjectPulseSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName("Note format")
+			.setDesc("How tasks and projects are recognized. Changing these doesn't rename existing notes' properties.")
+			.setHeading();
+		const name = (label: string, desc: string, key: "taskTag" | "statusProperty" | "projectProperty") =>
+			new Setting(containerEl)
+				.setName(label)
+				.setDesc(desc)
+				.addText((text) =>
+					text
+						.setPlaceholder(DEFAULT_SETTINGS[key])
+						.setValue(this.plugin.settings[key])
+						.onChange(async (value) => {
+							const v = value.trim().replace(/^#/, "").replace(/\s+/g, "-");
+							this.plugin.settings[key] = v || DEFAULT_SETTINGS[key];
+							await this.plugin.saveSettings();
+						})
+				);
+		name("Task tag", "Notes with this tag are tasks (without #).", "taskTag");
+		name("Status property", "Property that holds todo / in-progress / done / failed.", "statusProperty");
+		name("Project property", "Any note with this property is a project; its value is the project name.", "projectProperty");
+		new Setting(containerEl)
+			.setName("Sidebar icons")
+			.setDesc("Every view also has a command (Ctrl/Cmd+P), so hidden icons are never out of reach.")
+			.setHeading();
+		for (const [key, label] of RIBBON_ITEMS) {
+			new Setting(containerEl).setName(label).addToggle((t) =>
+				t.setValue(this.plugin.settings.ribbonIcons[key]).onChange(async (v) => {
+					this.plugin.settings.ribbonIcons[key] = v;
+					this.plugin.applyRibbonIcons();
+					await this.plugin.saveSettings();
+				})
+			);
+		}
+
+		new Setting(containerEl).setName("Folders").setHeading();
 
 		new Setting(containerEl)
 			.setName("New projects folder")

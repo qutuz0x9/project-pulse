@@ -53,7 +53,6 @@ function parseOptions(source: string): BlockOptions {
 }
 
 const STACK_ORDER: TaskStatus[] = ["done", "failed", "in-progress", "todo"];
-const STATUS_COLOR: Record<TaskStatus, string> = { todo: "#9ca3af", "in-progress": "#9b5de5", done: "#0d9488", failed: "#e5484d" };
 const ACCENT = { purple: "155, 93, 229", red: "220, 38, 38", green: "13, 148, 136", blue: "37, 99, 235", gold: "192, 131, 6" };
 
 /** Lives as long as the rendered block; re-renders when tasks (or the Pomodoro) change. */
@@ -122,7 +121,7 @@ class TaskBlock extends MarkdownRenderChild {
 		const counts = el.createDiv({ cls: "tt-legend" });
 		for (const s of STACK_ORDER) {
 			const item = counts.createSpan({ cls: "tt-legend-item" });
-			item.createSpan({ cls: "tt-legend-dot" }).setAttr("style", `background: ${STATUS_COLOR[s]}`);
+			item.createSpan({ cls: `tt-legend-dot tt-status-bg-${s}` });
 			item.appendText(`${STATUS_LABELS[s]} ${tasks.filter((t) => t.status === s).length}`);
 		}
 
@@ -205,7 +204,7 @@ class TaskBlock extends MarkdownRenderChild {
 			hours
 				.createDiv({ cls: "tt-progress" })
 				.createDiv({ cls: `tt-progress-fill${over ? " is-over" : ""}` })
-				.setAttr("style", `width: ${Math.min(100, Math.round((s.spent / s.estimate) * 100))}%`);
+				.setCssProps({ "--tt-pct": `${Math.min(100, Math.round((s.spent / s.estimate) * 100))}%` });
 			hours.createDiv({ cls: "tt-kpi-sub", text: `of ${s.estimate}h estimated${over ? " · over budget" : ""}` });
 		} else {
 			hours.createDiv({ cls: "tt-kpi-sub", text: "no estimates yet" });
@@ -284,7 +283,7 @@ class TaskBlock extends MarkdownRenderChild {
 		const bar = parent.createDiv({ cls: "tt-stackbar" });
 		for (const s of STACK_ORDER) {
 			const n = tasks.filter((t) => t.status === s).length;
-			if (n) bar.createDiv({ cls: "tt-stackbar-seg" }).setAttr("style", `flex: ${n}; background: ${STATUS_COLOR[s]}`);
+			if (n) bar.createDiv({ cls: `tt-stackbar-seg tt-status-bg-${s}` }).setCssProps({ "--tt-flex": String(n) });
 		}
 	}
 
@@ -317,7 +316,7 @@ class TaskBlock extends MarkdownRenderChild {
 
 function kpi(parent: HTMLElement, label: string, value: string, accent: string): HTMLElement {
 	const tile = parent.createDiv({ cls: "tt-kpi" });
-	tile.setAttr("style", `--c: ${accent}`);
+	tile.setCssProps({ "--c": accent });
 	tile.createDiv({ cls: "tt-kpi-label", text: label });
 	tile.createDiv({ cls: "tt-kpi-value", text: value });
 	return tile;

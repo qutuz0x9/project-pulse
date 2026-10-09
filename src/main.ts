@@ -9,7 +9,7 @@ import { CalendarView, VIEW_TYPE_CALENDAR } from "./CalendarView";
 import { registerCodeBlock } from "./codeBlock";
 import { createWeeklyReview } from "./weeklyReview";
 import { ProjectModal } from "./ProjectModal";
-import { DEFAULT_SETTINGS, ProjectPulseSettings, ProjectPulseSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, ProjectPulseSettings, ProjectPulseSettingTab, RIBBON_ITEMS, RibbonKey } from "./settings";
 import { TaskStore } from "./store";
 import { TaskListView, VIEW_TYPE_TASK_LIST } from "./TaskListView";
 import { TaskTimer } from "./timer";
@@ -23,6 +23,7 @@ export default class ProjectPulsePlugin extends Plugin {
 	store: TaskStore;
 	timer: TaskTimer;
 	pomodoro: Pomodoro;
+	private ribbonEls: Partial<Record<RibbonKey, HTMLElement>> = {};
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -39,13 +40,21 @@ export default class ProjectPulsePlugin extends Plugin {
 		registerCodeBlock(this);
 		this.registerView(VIEW_TYPE_POMODORO_STATS, (leaf) => new PomodoroStatsView(leaf, this));
 
-		this.addRibbonIcon("list-checks", "Open task list", () => this.activateView(VIEW_TYPE_TASK_LIST));
-		this.addRibbonIcon("layout-dashboard", "Open task dashboard", () => this.activateView(VIEW_TYPE_DASHBOARD));
-		this.addRibbonIcon("kanban", "Open task board", () => this.activateView(VIEW_TYPE_BOARD));
-		this.addRibbonIcon("timer", "Open Pomodoro", () => this.activatePomodoroView());
-		this.addRibbonIcon("trending-up", "Open Pomodoro statistics", () => this.openPomodoroStats());
-		this.addRibbonIcon("sun", "Open Today", () => this.activateView(VIEW_TYPE_TODAY));
-		this.addRibbonIcon("calendar-days", "Open task calendar", () => this.activateView(VIEW_TYPE_CALENDAR));
+		// Sidebar icons — each can be hidden in settings (all views also have commands).
+		const ribbon: Record<RibbonKey, [string, string, () => unknown]> = {
+			today: ["sun", "Open Today", () => this.activateView(VIEW_TYPE_TODAY)],
+			dashboard: ["layout-dashboard", "Open task dashboard", () => this.activateView(VIEW_TYPE_DASHBOARD)],
+			board: ["kanban", "Open task board", () => this.activateView(VIEW_TYPE_BOARD)],
+			list: ["list-checks", "Open task list", () => this.activateView(VIEW_TYPE_TASK_LIST)],
+			calendar: ["calendar-days", "Open task calendar", () => this.activateView(VIEW_TYPE_CALENDAR)],
+			pomodoro: ["timer", "Open Pomodoro", () => this.activatePomodoroView()],
+			stats: ["trending-up", "Open Pomodoro statistics", () => this.openPomodoroStats()],
+		};
+		for (const [key] of RIBBON_ITEMS) {
+			const [icon, title, open] = ribbon[key];
+			this.ribbonEls[key] = this.addRibbonIcon(icon, title, () => open());
+		}
+		this.applyRibbonIcons();
 
 		this.addCommand({
 			id: "open-calendar",
@@ -326,6 +335,15 @@ export default class ProjectPulsePlugin extends Plugin {
 		// Nested object: merge so new fields get their defaults.
 		this.settings.pomodoro = { ...DEFAULT_SETTINGS.pomodoro, ...data?.pomodoro };
 		this.settings.pomodoroSessions = [...(data?.pomodoroSessions ?? [])]; // own copy, never the default array
+		this.settings.pomodoroArchive = { ...DEFAULT_SETTINGS.pomodoroArchive, ...data?.pomodoroArchive };
+		// Existing installs (saved before icons were configurable) keep all their icons; new installs get the defaults.
+		const allOn = Object.fromEntries(RIBBON_ITEMS.map(([k]) => [k, true])) as Record<RibbonKey, boolean>;
+		this.settings.ribbonIcons = { ...(data && !data.ribbonIcons ? allOn : DEFAULT_SETTINGS.ribbonIcons), ...data?.ribbonIcons };
+	}
+
+	/** Shows or hides each sidebar icon according to settings. */
+	applyRibbonIcons(): void {
+		for (const [key] of RIBBON_ITEMS) this.ribbonEls[key]?.toggle(this.settings.ribbonIcons[key]);
 	}
 
 	async saveSettings(): Promise<void> {

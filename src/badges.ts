@@ -23,10 +23,7 @@ export function taskBadges(parent: HTMLElement, task: Task): boolean {
 			attr: { "aria-label": `Checklist: ${done} of ${total} done` },
 		});
 		el.createSpan({ text: `☑ ${done}/${total}` });
-		el.createSpan({ cls: "tt-checklist-bar" }).createSpan({ cls: "tt-checklist-fill" }).setAttr(
-			"style",
-			`width: ${Math.round((done / total) * 100)}%`
-		);
+		el.createSpan({ cls: "tt-checklist-bar" }).createSpan({ cls: "tt-checklist-fill" }).setCssProps({ "--tt-pct": `${Math.round((done / total) * 100)}%` });
 		added = true;
 	}
 	if (task.repeat) {
