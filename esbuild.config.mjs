@@ -16,6 +16,10 @@ const copyStatic = () => {
 const context = await esbuild.context({
 	entryPoints: ["src/main.ts"],
 	bundle: true,
+	// Release builds are minified; keep a pointer to the bundled libraries' licenses at the top.
+	banner: {
+		js: "/* Project Pulse — MIT License. Bundles Chart.js and FullCalendar (both MIT); see THIRD-PARTY-NOTICES.md in the repository. */",
+	},
 	external: [
 		"obsidian",
 		"electron",
