@@ -124,9 +124,27 @@ Project Pulse works entirely offline. It makes **no network requests** and colle
 
 ## Installation
 
-- **Community plugins** (once approved): Settings → Community plugins → Browse → search "Project Pulse".
-- **Beta via BRAT:** install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin, then "Add beta plugin" with this repository's URL.
-- **Manual:** download `main.js`, `manifest.json` and `styles.css` from the latest release into `<vault>/.obsidian/plugins/project-pulse/`, then enable the plugin.
+### Option 1 — BRAT (recommended while the plugin is in review)
+
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) installs plugins straight from GitHub and keeps them updated.
+
+1. In Obsidian: **Settings → Community plugins → Browse**, search **BRAT**, then **Install** and **Enable** it.
+2. **Settings → BRAT → Add beta plugin**.
+3. Paste `qutuz0x9/project-pulse` and click **Add plugin**.
+4. **Settings → Community plugins** → turn on **Project Pulse**.
+
+### Option 2 — Manual
+
+1. Download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/qutuz0x9/project-pulse/releases/latest).
+2. In your vault, create the folder `.obsidian/plugins/project-pulse/` and put the three files in it (`.obsidian` is hidden — enable "show hidden files" in your file manager).
+3. Restart Obsidian, or click the refresh icon in **Settings → Community plugins**.
+4. Turn on **Project Pulse**.
+
+Manual installs don't update themselves — repeat these steps for each new version.
+
+### Option 3 — Community plugins (once approved)
+
+**Settings → Community plugins → Browse** → search **Project Pulse** → **Install** → **Enable**.
 
 ## Development
 
