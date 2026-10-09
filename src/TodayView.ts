@@ -1,9 +1,9 @@
-import { ItemView, moment, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, moment, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 import { taskBadges } from "./badges";
 import type ProjectPulsePlugin from "./main";
 import { formatMinutes } from "./pomodoroStats";
 import { today } from "./store";
-import { isBlocked, isClosed, PRIORITY_LABELS, PRIORITY_RANK, Task } from "./types";
+import { isBlocked, isClosed, PRIORITIES, PRIORITY_LABELS, PRIORITY_RANK, STATUSES, STATUS_LABELS, Task, TaskPriority, TaskStatus } from "./types";
 
 export const VIEW_TYPE_TODAY = "project-pulse-today";
 
@@ -368,14 +368,19 @@ export class TodayView extends ItemView {
 		check.disabled = isClosed(task.status);
 		check.addEventListener("click", () => this.markDone(task));
 
-		row.createSpan({ cls: `tt-dot tt-prio-dot-${task.priority}`, attr: { "aria-label": `${PRIORITY_LABELS[task.priority]} priority` } });
+		// Priority dot: click to change priority.
+		const dot = row.createEl("button", {
+			cls: `tt-dot-btn`,
+			attr: { "aria-label": `${PRIORITY_LABELS[task.priority]} priority — click to change` },
+		});
+		dot.createSpan({ cls: `tt-dot tt-prio-dot-${task.priority}` });
+		dot.addEventListener("click", (e) => this.priorityMenu(task).showAtMouseEvent(e));
 
 		const text = row.createDiv({ cls: "tt-today-text" });
 		const title = text.createEl("a", { cls: "tt-title", text: task.title });
 		title.addEventListener("click", () => this.openTask(task.file));
 		const meta = text.createDiv({ cls: "tt-task-meta" });
 		if (task.project) meta.createSpan({ cls: "tt-task-project", text: task.project.name });
-		if (task.status === "in-progress") meta.createSpan({ cls: "tt-badge-mini is-progress", text: "In progress" });
 		taskBadges(meta, task);
 		if (task.estimate) meta.createSpan({ cls: "tt-badge-mini", text: `⏱ ${round1(Math.max(0, task.estimate - task.spent))}h left` });
 		if (task.scheduled?.startsWith(now) && task.scheduled.includes("T")) {
@@ -403,6 +408,24 @@ export class TodayView extends ItemView {
 			});
 		}
 
+		// Status pill: click to change status.
+		const status = row.createEl("button", {
+			cls: `tt-status-pill tt-pill-${task.status}`,
+			text: STATUS_LABELS[task.status],
+			attr: { "aria-label": "Change status" },
+		});
+		status.addEventListener("click", (e) => this.statusMenu(task).showAtMouseEvent(e));
+
+		const edit = row.createEl("button", { cls: "clickable-icon tt-today-edit", attr: { "aria-label": "Edit task" } });
+		setIcon(edit, "pencil");
+		edit.addEventListener("click", () => this.plugin.openEditTaskModal(task));
+
+		// Right-click anywhere on the row: everything in one menu.
+		row.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			this.rowMenu(task).showAtMouseEvent(e);
+		});
+
 		if (!isClosed(task.status)) {
 			const pomo = this.plugin.pomodoro;
 			const running = pomo.state.phase === "focus" && pomo.state.taskPath === task.file.path;
@@ -415,6 +438,54 @@ export class TodayView extends ItemView {
 		}
 
 		if (this.expanded.has(task.file.path)) this.renderChecklist(wrap, task);
+	}
+
+	// ---------- menus ----------
+
+	private statusMenu(task: Task, menu = new Menu()): Menu {
+		for (const s of STATUSES) {
+			menu.addItem((item) =>
+				item
+					.setTitle(STATUS_LABELS[s])
+					.setChecked(task.status === s)
+					.onClick(() => this.save(this.plugin.store.setStatus(task.file, s as TaskStatus)))
+			);
+		}
+		return menu;
+	}
+
+	private priorityMenu(task: Task, menu = new Menu()): Menu {
+		for (const p of [...PRIORITIES].reverse()) {
+			menu.addItem((item) =>
+				item
+					.setTitle(`${PRIORITY_LABELS[p]} priority`)
+					.setChecked(task.priority === p)
+					.onClick(() => this.save(this.plugin.store.setPriority(task.file, p as TaskPriority)))
+			);
+		}
+		return menu;
+	}
+
+	/** Right-click menu: status, priority, then actions. */
+	private rowMenu(task: Task): Menu {
+		const menu = new Menu();
+		this.statusMenu(task, menu);
+		menu.addSeparator();
+		this.priorityMenu(task, menu);
+		menu.addSeparator();
+		menu.addItem((i) => i.setTitle("Edit task").setIcon("pencil").onClick(() => this.plugin.openEditTaskModal(task)));
+		if (!isClosed(task.status)) {
+			menu.addItem((i) => i.setTitle("Start Pomodoro").setIcon("timer").onClick(() => this.plugin.startPomodoroFor(task.file)));
+		}
+		menu.addItem((i) => i.setTitle("Open note").setIcon("file-text").onClick(() => this.openTask(task.file)));
+		menu.addItem((i) =>
+			i.setTitle("Delete task").setIcon("trash-2").setWarning(true).onClick(() => this.plugin.confirmDeleteTask(task.file))
+		);
+		return menu;
+	}
+
+	private save(p: Promise<void>): void {
+		p.catch((e) => new Notice(`Project Pulse: ${e instanceof Error ? e.message : "save failed"}`));
 	}
 
 	// ---------- inline checklist ----------

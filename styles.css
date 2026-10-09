@@ -2141,3 +2141,45 @@
 .tt-status-bg-in-progress { background: #9b5de5; }
 .tt-status-bg-done { background: #0d9488; }
 .tt-status-bg-failed { background: #e5484d; }
+
+/* ---------- Today: editable rows ---------- */
+.tt-today .tt-dot-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	box-shadow: none;
+	cursor: pointer;
+}
+.tt-today .tt-dot-btn:hover { background: var(--background-modifier-hover); }
+.tt-today .tt-dot-btn:hover .tt-dot { transform: scale(1.35); }
+.tt-today .tt-dot-btn .tt-dot { transition: transform 0.12s; }
+.tt-today .tt-status-pill {
+	flex: 0 0 auto;
+	height: auto;
+	padding: 2px 10px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	box-shadow: none;
+	font-size: 0.75em;
+	font-weight: 700;
+	color: var(--text-normal);
+	cursor: pointer;
+}
+.tt-today .tt-status-pill:hover { border-color: rgba(155, 93, 229, 0.6); }
+.tt-today .tt-today-edit {
+	flex: 0 0 auto;
+	padding: 4px;
+	color: var(--text-muted);
+	opacity: 0;
+	transition: opacity 0.12s;
+}
+.tt-today .tt-today-edit svg { width: 14px; height: 14px; }
+.tt-today-row:hover .tt-today-edit,
+.tt-today .tt-today-edit:focus-visible { opacity: 1; }
+@media (hover: none) { .tt-today .tt-today-edit { opacity: 1; } }
