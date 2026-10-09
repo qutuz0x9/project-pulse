@@ -205,8 +205,10 @@ export class PomodoroView extends ItemView {
 		return this.plugin.store
 			.getTasks()
 			.filter((t) => !isClosed(t.status))
+			// Earliest due first (no due date last); same day → in progress, then priority, then title.
 			.sort(
 				(a, b) =>
+					(a.due ?? "9999").localeCompare(b.due ?? "9999") ||
 					(a.status === "in-progress" ? 0 : 1) - (b.status === "in-progress" ? 0 : 1) ||
 					PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
 					a.title.localeCompare(b.title)

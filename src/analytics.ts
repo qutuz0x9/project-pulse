@@ -208,3 +208,38 @@ function countBy<K extends string>(tasks: Task[], key: (t: Task) => K, keys: rea
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+// ---------- period filter (dashboard) ----------
+
+export type Period = "day" | "week" | "month" | "year" | "all";
+
+export const PERIOD_LABELS: [Period, string][] = [
+	["day", "Today"],
+	["week", "Week"],
+	["month", "Month"],
+	["year", "Year"],
+	["all", "All"],
+];
+
+/** First and last day (YYYY-MM-DD) of the current day/week/month/year; null for "all". */
+export function periodRange(period: Period): { from: string; to: string } | null {
+	if (period === "all") return null;
+	const unit = period === "day" ? "day" : period;
+	return {
+		from: moment().startOf(unit).format("YYYY-MM-DD"),
+		to: moment().endOf(unit).format("YYYY-MM-DD"),
+	};
+}
+
+/**
+ * Tasks due inside the period, plus open overdue tasks from before it (they still need doing).
+ * "all" returns every task, including ones without a due date.
+ */
+export function tasksInPeriod(tasks: Task[], period: Period): Task[] {
+	const range = periodRange(period);
+	if (!range) return tasks;
+	const now = today();
+	return tasks.filter(
+		(t) => t.due !== null && ((t.due >= range.from && t.due <= range.to) || isOverdue(t, now))
+	);
+}

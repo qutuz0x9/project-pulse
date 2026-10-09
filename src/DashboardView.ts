@@ -5,11 +5,15 @@ import {
 	countByCategory,
 	estimateVsSpent,
 	overdueTasks,
+	Period,
+	PERIOD_LABELS,
+	periodRange,
 	projectRows,
 	statusOverTime,
 	TrendDate,
 	summarize,
 	Summary,
+	tasksInPeriod,
 	upcomingTasks,
 } from "./analytics";
 import { barChart, burndownChart, CATEGORY_COLOR, estimateChart, STATUS_COLORS, statusTrendChart } from "./charts";
@@ -39,6 +43,7 @@ const ACCENT = {
  */
 export class DashboardView extends ItemView {
 	private projectScope = "all"; // "all" or a project id
+	private period: Period = "all"; // which tasks the whole page counts (by due date)
 	private charts: Chart[] = [];
 	private hasRendered = false;
 	private trendBy: TrendDate = "due"; // switch on the "status over time" chart — first option = default
@@ -135,7 +140,8 @@ export class DashboardView extends ItemView {
 
 		const store = this.plugin.store;
 		const projects = store.getProjects();
-		const allTasks = store.getTasks();
+		// Period filter first, so every number, list and chart below counts the same tasks.
+		const allTasks = tasksInPeriod(store.getTasks(), this.period);
 		const project = projects.find((p) => p.id === this.projectScope) ?? null;
 		if (!project) this.projectScope = "all";
 		const tasks = project ? allTasks.filter((t) => t.project?.id === project.id) : allTasks;
@@ -143,9 +149,15 @@ export class DashboardView extends ItemView {
 		this.renderHeader(root, projects, project, tasks.length);
 
 		if (tasks.length === 0) {
+			const label = PERIOD_LABELS.find(([p]) => p === this.period)?.[1].toLowerCase() ?? "";
 			root.createDiv({
 				cls: "tt-empty",
-				text: project ? "No tasks in this project yet." : "No tasks yet. Create one with the \"New task\" button.",
+				text:
+					this.period !== "all"
+						? `Nothing due ${this.period === "day" ? "today" : `this ${label}`} and nothing overdue. Pick a longer period above.`
+						: project
+							? "No tasks in this project yet."
+							: "No tasks yet. Create one with the \"New task\" button.",
 			});
 			return;
 		}
@@ -261,14 +273,31 @@ export class DashboardView extends ItemView {
 		}
 		text.createDiv({ cls: "tt-dash-eyebrow", text: project ? "Project" : "Overview" });
 		text.createEl("h2", { cls: "tt-dash-title", text: project ? project.name : "All projects" });
+		const range = periodRange(this.period);
+		const when = !range
+			? ""
+			: this.period === "day"
+				? " · due today + overdue"
+				: ` · due ${moment(range.from).format("MMM D")} – ${moment(range.to).format("MMM D")} + overdue`;
 		text.createDiv({
 			cls: "tt-dash-sub",
-			text: project
-				? `${taskCount} task${taskCount === 1 ? "" : "s"}`
-				: `${projects.length} project${projects.length === 1 ? "" : "s"} · ${taskCount} task${taskCount === 1 ? "" : "s"}`,
+			text:
+				(project
+					? `${taskCount} task${taskCount === 1 ? "" : "s"}`
+					: `${projects.length} project${projects.length === 1 ? "" : "s"} · ${taskCount} task${taskCount === 1 ? "" : "s"}`) + when,
 		});
 
 		const controls = bar.createDiv({ cls: "tt-dash-controls" });
+		// Period switch: Today · Week · Month · Year · All
+		const seg = controls.createDiv({ cls: "tt-seg", attr: { role: "group", "aria-label": "Period" } });
+		for (const [value, label] of PERIOD_LABELS) {
+			const btn = seg.createEl("button", { cls: `tt-seg-btn${this.period === value ? " is-active" : ""}`, text: label });
+			btn.addEventListener("click", () => {
+				if (this.period === value) return;
+				this.period = value;
+				this.render();
+			});
+		}
 		const sel = controls.createEl("select", { cls: "dropdown" });
 		sel.createEl("option", { value: "all", text: "All projects" });
 		for (const p of projects) sel.createEl("option", { value: p.id, text: p.name });

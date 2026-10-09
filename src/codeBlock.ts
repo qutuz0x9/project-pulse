@@ -273,8 +273,17 @@ class TaskBlock extends MarkdownRenderChild {
 		this.clockEl?.setText(formatClock(this.plugin.pomodoro.remainingMs()));
 	}
 
+	/** Open tasks for the picker — earliest due first (no due date last), then priority. */
 	private openTasks(): Task[] {
-		return this.plugin.store.getTasks().filter((t) => !isClosed(t.status));
+		return this.plugin.store
+			.getTasks()
+			.filter((t) => !isClosed(t.status))
+			.sort(
+				(a, b) =>
+					(a.due ?? "9999").localeCompare(b.due ?? "9999") ||
+					PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+					a.title.localeCompare(b.title)
+			);
 	}
 
 	// ---------- shared ----------
