@@ -1,17 +1,17 @@
 import type { Chart } from "chart.js";
+import { periodRange, type Period } from "./analytics";
 import { ItemView, moment, setIcon, WorkspaceLeaf } from "obsidian";
-import { barChart } from "./charts";
+import { barChart, lineChart } from "./charts";
 import type ProjectPulsePlugin from "./main";
 import {
 	allTimeStats,
-	dailyMinutes,
-	focusByTask,
+	between,
+	focusBuckets,
 	formatMinutes,
 	onDay,
 	periodStats,
 	PeriodStats,
 	streak,
-	thisWeek,
 } from "./pomodoroStats";
 import { today } from "./store";
 
@@ -20,11 +20,14 @@ export const VIEW_TYPE_POMODORO_STATS = "project-pulse-pomodoro-stats";
 const PURPLE = "#9b5de5";
 const ACCENT = { purple: "155, 93, 229", gold: "192, 131, 6", green: "13, 148, 136", blue: "37, 99, 235" };
 const RECENT_LIMIT = 20;
+const PERIODS: [Period, string][] = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"], ["all", "All"]];
 
-/** Main-area tab: overview tiles → period table → focus per day → focus by task → recent sessions. */
+/** Main-area tab: overview tiles → period table → focus over time → focus per day → recent sessions. */
 export class PomodoroStatsView extends ItemView {
 	private charts: Chart[] = [];
 	private hasRendered = false;
+	private period: Period = "week";
+	private listPeriod: Period = "week";
 
 	constructor(leaf: WorkspaceLeaf, private plugin: ProjectPulsePlugin) {
 		super(leaf);
@@ -70,11 +73,15 @@ export class PomodoroStatsView extends ItemView {
 
 		// Header
 		const header = root.createDiv({ cls: "tt-dash-header" });
-		const heading = header.createDiv({ cls: "tt-dash-heading" });
+		const brand = header.createDiv({ cls: "tt-brand" });
+		setIcon(brand.createDiv({ cls: "tt-brand-icon" }), "timer");
+		const heading = brand.createDiv({ cls: "tt-dash-heading" });
 		heading.createDiv({ cls: "tt-dash-eyebrow", text: "Pomodoro" });
 		heading.createEl("h2", { cls: "tt-dash-title", text: "Statistics" });
 		const recorded = sessions.length + this.plugin.settings.pomodoroArchive.sessions;
-		heading.createDiv({ cls: "tt-dash-sub", text: `${recorded} focus session${recorded === 1 ? "" : "s"} recorded` });
+		const chips = heading.createDiv({ cls: "tt-pstats-chips" });
+		chips.createSpan({ cls: "tt-pstats-chip", text: `${recorded} focus session${recorded === 1 ? "" : "s"}` });
+		if (sessions.length) chips.createSpan({ cls: "tt-pstats-chip", text: `since ${moment(sessions[sessions.length - 1].start).format("MMM D, YYYY")}` });
 		const controls = header.createDiv({ cls: "tt-dash-controls" });
 		const openPanel = controls.createEl("button", { cls: "mod-cta", text: "Open Pomodoro" });
 		openPanel.addEventListener("click", () => this.plugin.activatePomodoroView());
@@ -98,45 +105,55 @@ export class PomodoroStatsView extends ItemView {
 		tile(tiles, "Day streak", `${days}`, { text: days ? "days in a row with a 🍅" : "finish a 🍅 today to start one", tone: "" }, ACCENT.gold);
 		tile(tiles, "Total focus", formatMinutes(all.minutes), { text: `${all.pomodoros} pomodoros in all`, tone: "" }, ACCENT.green);
 
-		// Periods table
+		// Periods table: each current period is followed by the one before it, with the change in focus time
 		section(root, "By period");
 		const table = root.createDiv({ cls: "tt-ptable tt-period-table" });
 		const head = table.createDiv({ cls: "tt-prow tt-prow-head" });
-		for (const h of ["Period", "Pomodoros", "Focus", "Avg length", "Completion"]) head.createSpan({ text: h });
-		const row = (label: string, p: PeriodStats) => {
-			const r = table.createDiv({ cls: "tt-prow" });
+		for (const h of ["Period", "Pomodoros", "Focus", "Avg length", "Completion", "vs previous"]) head.createSpan({ text: h });
+		const row = (label: string, p: PeriodStats, prev?: PeriodStats) => {
+			const r = table.createDiv({ cls: `tt-prow${prev ? "" : " is-muted"}` });
 			r.createSpan({ cls: "tt-prow-name", text: label });
 			r.createSpan({ cls: "tt-num tt-big", text: `${p.pomodoros}` });
 			r.createSpan({ cls: "tt-num", text: formatMinutes(p.minutes) });
 			r.createSpan({ cls: "tt-num", text: p.avgMinutes ? `${p.avgMinutes}m` : "—" });
 			r.createSpan({ cls: "tt-num", text: p.minutes ? `${p.completion}%` : "—" });
+			const diff = prev ? p.minutes - prev.minutes : 0;
+			const pct = prev && prev.minutes ? ` (${diff > 0 ? "+" : ""}${Math.round((diff / prev.minutes) * 100)}%)` : "";
+			r.createSpan({
+				cls: `tt-num tt-delta ${diff > 0 ? "is-up" : diff < 0 ? "is-down" : ""}`.trim(),
+				text: prev ? (diff === 0 ? "same" : `${diff > 0 ? "+" : "−"}${formatMinutes(Math.abs(diff))}${pct}`) : "",
+			});
 		};
-		row("Today", todayStats);
-		row("This week", periodStats(thisWeek(sessions)));
+		const stats = (unit: "day" | "week" | "month", ago: number) => {
+			const m = moment().subtract(ago, unit === "day" ? "day" : unit === "week" ? "week" : "month");
+			return periodStats(between(sessions, m.clone().startOf(unit).format("YYYY-MM-DD"), m.clone().endOf(unit).format("YYYY-MM-DD")));
+		};
+		for (const [unit, now, before] of [["day", "Today", "Yesterday"], ["week", "This week", "Last week"], ["month", "This month", "Last month"]] as const) {
+			row(now, stats(unit, 0), stats(unit, 1));
+			row(before, stats(unit, 1));
+		}
 		row("All time", all);
 
 		// Charts
 		section(root, "Focus");
-		const grid = root.createDiv({ cls: "tt-grid" });
-		const daily = dailyMinutes(sessions, 14);
-		this.chartCard(grid, "Focus per day", "Minutes, last 14 days", (c) =>
-			barChart(c, daily.map((d) => d.label), [{ label: "Focus", data: daily.map((d) => d.minutes), backgroundColor: PURPLE }], animate, { unit: "m" })
-		);
-		const byTask = focusByTask(sessions);
-		this.chartCard(grid, "Focus by task", "Top tasks by focus time", (c) =>
-			barChart(
-				c,
-				byTask.map((t) => (t.title.length > 26 ? t.title.slice(0, 25) + "…" : t.title)),
-				[{ label: "Focus", data: byTask.map((t) => t.minutes), backgroundColor: PURPLE }],
-				animate,
-				{ horizontal: true, unit: "m" }
-			)
+		this.periodSwitch(root, this.period, (p) => (this.period = p));
+		const buckets = focusBuckets(sessions, this.period);
+		const labels = buckets.map((b) => b.label);
+		const minutes = buckets.map((b) => b.minutes);
+		const unit = this.period === "day" ? "Minutes per hour, today" : this.period === "year" || this.period === "all" ? "Minutes per month" : "Minutes per day";
+		const rows = root.createDiv({ cls: "tt-pstats-rows" });
+		this.chartCard(rows, "Focus over time", unit, (c) => lineChart(c, labels, minutes, PURPLE, "Focus", animate, "m"));
+		this.chartCard(rows, "Focus per day", unit, (c) =>
+			barChart(c, labels, [{ label: "Focus", data: minutes, backgroundColor: PURPLE }], animate, { unit: "m" })
 		);
 
 		// Recent sessions
 		section(root, "Recent sessions");
+		this.periodSwitch(root, this.listPeriod, (p) => (this.listPeriod = p));
+		const range = periodRange(this.listPeriod);
+		const shown = range ? sessions.filter((s) => s.start.slice(0, 10) >= range.from && s.start.slice(0, 10) <= range.to) : sessions;
 		const list = root.createDiv({ cls: "tt-sessions" });
-		for (const s of sessions.slice(0, RECENT_LIMIT)) {
+		for (const s of shown.slice(0, RECENT_LIMIT)) {
 			const item = list.createDiv({ cls: "tt-session" });
 			item.createSpan({ cls: "tt-session-time", text: moment(s.start).format("MMM D, HH:mm") });
 			item.createSpan({ cls: "tt-session-min", text: `${s.minutes} min` });
@@ -156,8 +173,24 @@ export class PomodoroStatsView extends ItemView {
 			setIcon(del, "trash-2");
 			del.addEventListener("click", () => this.plugin.pomodoro.deleteSession(s.id));
 		}
-		if (sessions.length > RECENT_LIMIT) {
-			list.createDiv({ cls: "tt-list-more", text: `Showing the latest ${RECENT_LIMIT} of ${sessions.length}` });
+		if (shown.length === 0) list.createDiv({ cls: "tt-list-more", text: "No sessions in this period" });
+		if (shown.length > RECENT_LIMIT) {
+			list.createDiv({ cls: "tt-list-more", text: `Showing the latest ${RECENT_LIMIT} of ${shown.length}` });
+		}
+	}
+
+	private periodSwitch(parent: HTMLElement, current: Period, set: (p: Period) => void): void {
+		const seg = parent.createDiv({ cls: "tt-seg", attr: { role: "group", "aria-label": "Period" } });
+		for (const [value, label] of PERIODS) {
+			const btn = seg.createEl("button", { cls: `tt-seg-btn${current === value ? " is-active" : ""}`, text: label });
+			btn.addEventListener("click", () => {
+				if (current === value) return;
+				set(value);
+				// render() rebuilds the page, which would jump back to the top — put the scroll position back.
+				const top = this.contentEl.scrollTop;
+				this.render();
+				this.contentEl.scrollTop = top;
+			});
 		}
 	}
 

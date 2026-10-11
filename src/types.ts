@@ -7,6 +7,31 @@ export type TaskStatus = (typeof STATUSES)[number];
 /** Done and Failed are "closed": not open, never overdue, and they get a `completed` (closed) date. */
 export const isClosed = (status: TaskStatus): boolean => status === "done" || status === "failed";
 
+/** Where a whole project stands. Stored on the project note; when missing it is worked out from its tasks. */
+export const PROJECT_STATUSES = ["not-started", "in-progress", "on-hold", "done"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+	"not-started": "Not started",
+	"in-progress": "In progress",
+	"on-hold": "On hold",
+	done: "Done",
+};
+
+export const PROJECT_STATUS_COLORS: Record<ProjectStatus, string> = {
+	"not-started": "#9ca3af",
+	"in-progress": "#9b5de5",
+	"on-hold": "#c08306",
+	done: "#0d9488",
+};
+
+/** Guess for projects with no saved status: all tasks closed → done, any work begun → in progress, else not started. */
+export function derivedProjectStatus(tasks: Task[]): ProjectStatus {
+	if (tasks.length && tasks.every((t) => isClosed(t.status))) return "done";
+	if (tasks.some((t) => t.status !== "todo" || t.spent > 0)) return "in-progress";
+	return "not-started";
+}
+
 export const PRIORITIES = ["low", "medium", "high"] as const;
 export type TaskPriority = (typeof PRIORITIES)[number];
 
@@ -45,6 +70,8 @@ export const FM = {
 	next: "next", // on a closed recurring task: link to the copy it created
 	blockedBy: "blocked-by", // links to tasks that must be closed first
 	scheduled: "scheduled", // when you plan to work on it: "2026-10-09" (all day) or "2026-10-09T14:00"
+	projectIcon: "project-icon", // on a project note: a Lucide icon name, e.g. "rocket" (optional; guessed from the name otherwise)
+	projectStatus: "project-status", // on a project note: not-started | in-progress | on-hold | done
 	scheduledEnd: "scheduled-end", // end of that block, same format (a date = last all-day day, inclusive)
 } as const;
 
@@ -53,6 +80,8 @@ export interface Project {
 	name: string; // display name from `tracker-project`, e.g. "Food Delivery Clone"
 	folder: string; // folder of the project note; its tasks go in <folder>/Tasks/
 	file: TFile; // the project note (any note with a `tracker-project` property)
+	icon: string | null; // saved `project-icon`, if any
+	status: ProjectStatus | null; // saved `project-status`; null = not set yet (see derivedProjectStatus)
 }
 
 export interface Task {

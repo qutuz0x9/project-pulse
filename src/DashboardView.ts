@@ -1,5 +1,5 @@
 import type { Chart } from "chart.js";
-import { ItemView, moment, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, Menu, moment, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 import {
 	burndown,
 	countByCategory,
@@ -18,10 +18,21 @@ import {
 } from "./analytics";
 import { barChart, burndownChart, CATEGORY_COLOR, estimateChart, STATUS_COLORS, statusTrendChart } from "./charts";
 import type ProjectPulsePlugin from "./main";
+import { projectIcon } from "./projectIcon";
 import { today } from "./store";
-import { isClosed, PRIORITIES, PRIORITY_LABELS, Project, STATUSES, STATUS_LABELS, Task, TaskStatus } from "./types";
+import { derivedProjectStatus, isClosed, PRIORITIES, PRIORITY_LABELS, Project, PROJECT_STATUS_COLORS, PROJECT_STATUS_LABELS, PROJECT_STATUSES, ProjectStatus, STATUSES, STATUS_LABELS, Task, TaskStatus } from "./types";
 
 // Order of segments in stacked status bars: finished work first, then active, then waiting.
+type ProjectSort = "progress" | "name" | "status" | "overdue" | "tasks" | "hours";
+const PROJECT_SORTS: [ProjectSort, string][] = [
+	["progress", "Progress"],
+	["name", "Name"],
+	["status", "Status"],
+	["overdue", "Most overdue"],
+	["tasks", "Most tasks"],
+	["hours", "Hours left"],
+];
+
 const STACK_ORDER: TaskStatus[] = ["done", "failed", "in-progress", "todo"];
 
 export const VIEW_TYPE_DASHBOARD = "project-pulse-dashboard";
@@ -42,6 +53,8 @@ const ACCENT = {
  * header → KPI tiles → needs attention → projects (all-projects mode) → progress over time → breakdown → time.
  */
 export class DashboardView extends ItemView {
+	private projectSort: ProjectSort = "progress";
+	private projectStatusFilter: ProjectStatus | "all" = "all"; // status filter on the project cards
 	private projectScope = "all"; // "all" or a project id
 	private period: Period = "all"; // which tasks the whole page counts (by due date)
 	private charts: Chart[] = [];
@@ -261,7 +274,9 @@ export class DashboardView extends ItemView {
 
 	private renderHeader(root: HTMLElement, projects: Project[], project: Project | null, taskCount: number): void {
 		const bar = root.createDiv({ cls: "tt-dash-header" });
-		const text = bar.createDiv({ cls: "tt-dash-heading" });
+		const brand = bar.createDiv({ cls: "tt-brand" });
+		setIcon(brand.createDiv({ cls: "tt-brand-icon" }), project ? projectIcon(project) : "layout-dashboard");
+		const text = brand.createDiv({ cls: "tt-dash-heading" });
 		if (project) {
 			const back = text.createEl("button", { cls: "tt-back", attr: { "aria-label": "Back to all projects" } });
 			setIcon(back.createSpan({ cls: "tt-back-icon" }), "arrow-left");
@@ -274,18 +289,23 @@ export class DashboardView extends ItemView {
 		text.createDiv({ cls: "tt-dash-eyebrow", text: project ? "Project" : "Overview" });
 		text.createEl("h2", { cls: "tt-dash-title", text: project ? project.name : "All projects" });
 		const range = periodRange(this.period);
-		const when = !range
-			? ""
-			: this.period === "day"
-				? " · due today + overdue"
-				: ` · due ${moment(range.from).format("MMM D")} – ${moment(range.to).format("MMM D")} + overdue`;
-		text.createDiv({
-			cls: "tt-dash-sub",
-			text:
-				(project
-					? `${taskCount} task${taskCount === 1 ? "" : "s"}`
-					: `${projects.length} project${projects.length === 1 ? "" : "s"} · ${taskCount} task${taskCount === 1 ? "" : "s"}`) + when,
-		});
+		const chips = text.createDiv({ cls: "tt-list-chips" });
+		const chip = (label: string, cls = "", icon = "") => {
+			const c = chips.createSpan({ cls: `tt-list-chip ${cls}`.trim() });
+			if (icon) setIcon(c.createSpan({ cls: "tt-list-chip-icon" }), icon);
+			c.createSpan({ text: label });
+		};
+		if (!project) chip(`${projects.length} project${projects.length === 1 ? "" : "s"}`, "is-open", "folder");
+		chip(`${taskCount} task${taskCount === 1 ? "" : "s"}`, "", "list-checks");
+		if (range) {
+			chip(
+				this.period === "day"
+					? "due today + overdue"
+					: `due ${moment(range.from).format("MMM D")} – ${moment(range.to).format("MMM D")} + overdue`,
+				"",
+				"calendar"
+			);
+		}
 
 		const controls = bar.createDiv({ cls: "tt-dash-controls" });
 		// Period switch: Today · Week · Month · Year · All
@@ -352,38 +372,98 @@ export class DashboardView extends ItemView {
 		}
 	}
 
-	/** All-projects mode: aligned rows so progress bars are easy to compare. Click a row to drill in. */
+	/** All-projects mode: one card per project with a status filter on top. Click a card to drill in. */
 	private renderProjects(root: HTMLElement, projects: Project[], tasks: Task[]): void {
-		const rows = projectRows(projects, tasks).sort((a, b) => b.summary.progress - a.summary.progress);
 		const orphans = tasks.filter((t) => !t.project);
-		if (!rows.length && !orphans.length) return;
+		const all = projectRows(projects, tasks)
+			.map((r) => ({ ...r, status: r.project.status ?? derivedProjectStatus(tasks.filter((t) => t.project?.id === r.project.id)) }))
+			.sort((a, b) => a.project.name.localeCompare(b.project.name));
+		if (!all.length && !orphans.length) return;
 
 		section(root, "Projects");
-		const table = root.createDiv({ cls: "tt-ptable" });
-		const head = table.createDiv({ cls: "tt-prow tt-prow-head" });
-		for (const h of ["Project", "Status", "Done", "Overdue", "Hours"]) head.createSpan({ text: h });
 
-		const addRow = (name: string, s: Summary, onClick: (() => void) | null) => {
-			const row = table.createDiv({ cls: `tt-prow${onClick ? " is-clickable" : " is-muted"}` });
-			if (onClick) row.addEventListener("click", onClick);
-			row.createSpan({ cls: "tt-prow-name", text: name });
-			const bar = row.createDiv({ cls: "tt-stackbar" });
+		// Status filter: counts per status, only on this list.
+		const tools = root.createDiv({ cls: "tt-ptools" });
+		const filter = tools.createDiv({ cls: "tt-seg", attr: { role: "group", "aria-label": "Filter projects by status" } });
+		const options: [ProjectStatus | "all", string][] = [["all", "All"], ...PROJECT_STATUSES.map((st): [ProjectStatus, string] => [st, PROJECT_STATUS_LABELS[st]])];
+		for (const [value, label] of options) {
+			const count = value === "all" ? all.length : all.filter((r) => r.status === value).length;
+			const btn = filter.createEl("button", { cls: `tt-seg-btn${this.projectStatusFilter === value ? " is-active" : ""}` });
+			btn.createSpan({ text: label });
+			btn.createSpan({ cls: "tt-seg-count", text: `${count}` });
+			btn.addEventListener("click", () => {
+				if (this.projectStatusFilter === value) return;
+				this.projectStatusFilter = value;
+				const top = this.contentEl.scrollTop;
+				this.render();
+				this.contentEl.scrollTop = top;
+			});
+		}
+
+		const sort = tools.createEl("select", { cls: "dropdown", attr: { "aria-label": "Sort projects" } });
+		for (const [value, label] of PROJECT_SORTS) sort.createEl("option", { value, text: `Sort: ${label}` });
+		sort.value = this.projectSort;
+		sort.addEventListener("change", () => {
+			this.projectSort = sort.value as ProjectSort;
+			const top = this.contentEl.scrollTop;
+			this.render();
+			this.contentEl.scrollTop = top;
+		});
+
+		const left = (r: (typeof all)[number]) => (r.summary.estimate ? Math.max(0, r.summary.estimate - r.summary.spent) : 0);
+		const order: Record<ProjectSort, (a: (typeof all)[number], b: (typeof all)[number]) => number> = {
+			progress: (a, b) => b.summary.progress - a.summary.progress,
+			name: () => 0, // already by name
+			status: (a, b) => PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status),
+			overdue: (a, b) => b.summary.overdue - a.summary.overdue,
+			tasks: (a, b) => b.summary.total - a.summary.total,
+			hours: (a, b) => left(b) - left(a),
+		};
+		const filtered = this.projectStatusFilter === "all" ? all : all.filter((r) => r.status === this.projectStatusFilter);
+		const rows = [...filtered].sort(order[this.projectSort]); // stable: ties stay alphabetical
+		const grid = root.createDiv({ cls: "tt-pcards" });
+		if (!rows.length) grid.createDiv({ cls: "tt-card-empty", text: "No projects with this status." });
+
+		const addCard = (name: string, s: Summary, status: ProjectStatus | null, project: Project | null) => {
+			const card = grid.createDiv({ cls: `tt-pcard${project ? " is-clickable" : " is-muted"}` });
+			if (status) card.setCssProps({ "--c": PROJECT_STATUS_COLORS[status] });
+			if (project) {
+				card.addEventListener("click", () => {
+					this.projectScope = project.id;
+					this.render();
+				});
+			}
+			const head = card.createDiv({ cls: "tt-pcard-head" });
+			setIcon(head.createDiv({ cls: "tt-pcard-icon" }), project ? projectIcon(project) : "help-circle");
+			head.createDiv({ cls: "tt-pcard-name", text: name });
+			if (project && status) {
+				const pill = head.createEl("button", { cls: "tt-pstatus", text: PROJECT_STATUS_LABELS[status], attr: { "aria-label": "Change project status" } });
+				pill.addEventListener("click", (e) => {
+					e.stopPropagation(); // don't open the project
+					const menu = new Menu();
+					for (const st of PROJECT_STATUSES) {
+						menu.addItem((item) =>
+							item.setTitle(PROJECT_STATUS_LABELS[st]).setChecked(status === st).onClick(() => this.plugin.store.setProjectStatus(project, st))
+						);
+					}
+					menu.showAtMouseEvent(e);
+				});
+			}
+			const pct = card.createDiv({ cls: "tt-pcard-pct" });
+			pct.createSpan({ cls: "tt-pcard-big", text: `${s.progress}%` });
+			pct.createSpan({ cls: "tt-muted", text: `${s.byStatus.done}/${s.total} done` });
+			const bar = card.createDiv({ cls: "tt-stackbar" });
 			for (const st of STACK_ORDER) {
 				if (s.byStatus[st]) bar.createDiv({ cls: `tt-stackbar-seg tt-status-bg-${st}` }).setCssProps({ "--tt-flex": String(s.byStatus[st]) });
 			}
-			row.createSpan({ cls: "tt-num", text: `${s.byStatus.done}/${s.total} · ${s.progress}%` });
-			row.createSpan({ cls: `tt-num${s.overdue ? " tt-overdue" : " tt-muted"}`, text: s.overdue ? `${s.overdue}` : "—" });
-			row.createSpan({ cls: "tt-num tt-muted", text: s.estimate ? `${s.spent} / ${s.estimate}h` : `${s.spent}h` });
+			const foot = card.createDiv({ cls: "tt-pcard-foot" });
+			foot.createSpan({ cls: s.overdue ? "tt-overdue" : "tt-muted", text: s.overdue ? `${s.overdue} overdue` : "none overdue" });
+			foot.createSpan({ cls: "tt-muted", text: s.estimate ? `${s.spent} / ${s.estimate}h` : `${s.spent}h` });
 		};
 
-		for (const { project, summary } of rows) {
-			addRow(project.name, summary, () => {
-				this.projectScope = project.id;
-				this.render();
-			});
-		}
+		for (const { project, summary, status } of rows) addCard(project.name, summary, status, project);
 		// Tasks whose project link is missing/broken — shown so they don't silently disappear.
-		if (orphans.length) addRow("No project", summarize(orphans), null);
+		if (orphans.length && this.projectStatusFilter === "all") addCard("No project", summarize(orphans), null, null);
 	}
 
 	private chartCard(

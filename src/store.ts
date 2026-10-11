@@ -18,6 +18,8 @@ import {
 	NewTaskInput,
 	PRIORITIES,
 	Project,
+	PROJECT_STATUSES,
+	ProjectStatus,
 	STATUSES,
 	Task,
 	TaskPriority,
@@ -57,10 +59,11 @@ export class TaskStore extends Events {
 	getProjects(): Project[] {
 		const projects: Project[] = [];
 		for (const file of this.app.vault.getMarkdownFiles()) {
-			const value = this.app.metadataCache.getFileCache(file)?.frontmatter?.[this.settings.projectProperty];
+			const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			const value = fm?.[this.settings.projectProperty];
 			if (!value) continue;
 			const name = typeof value === "string" && value.trim() ? value.trim() : file.basename;
-			projects.push({ id: file.path, name, folder: file.parent?.path ?? "", file });
+			projects.push({ id: file.path, name, folder: file.parent?.path ?? "", file, icon: typeof fm?.[FM.projectIcon] === "string" ? fm[FM.projectIcon].trim() || null : null, status: oneOf(fm?.[FM.projectStatus], PROJECT_STATUSES, null) });
 		}
 		return projects.sort((a, b) => a.name.localeCompare(b.name));
 	}
@@ -176,6 +179,12 @@ export class TaskStore extends Events {
 	async markAsProject(file: TFile, name: string): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm) => {
 			fm[this.settings.projectProperty] = name;
+		});
+	}
+
+	async setProjectStatus(project: Project, status: ProjectStatus): Promise<void> {
+		await this.app.fileManager.processFrontMatter(project.file, (fm) => {
+			fm[FM.projectStatus] = status;
 		});
 	}
 
@@ -366,7 +375,7 @@ export class TaskStore extends Events {
 
 // ---------- helpers ----------
 
-function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+function oneOf<T extends string, F>(value: unknown, allowed: readonly T[], fallback: F): T | F {
 	return allowed.includes(value as T) ? (value as T) : fallback;
 }
 

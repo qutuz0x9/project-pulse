@@ -105,7 +105,9 @@ export class TaskListView extends ItemView {
 
 		// Header
 		const header = root.createDiv({ cls: "tt-dash-header" });
-		const heading = header.createDiv({ cls: "tt-dash-heading" });
+		const brand = header.createDiv({ cls: "tt-brand" });
+		setIcon(brand.createDiv({ cls: "tt-brand-icon" }), "list-checks");
+		const heading = brand.createDiv({ cls: "tt-dash-heading" });
 		heading.createDiv({ cls: "tt-dash-eyebrow", text: "Tasks" });
 		heading.createEl("h2", { cls: "tt-dash-title", text: "Task list" });
 		this.subEl = heading.createDiv({ cls: "tt-list-chips" });
@@ -189,12 +191,16 @@ export class TaskListView extends ItemView {
 		const overdue = tasks.filter((t) => isOverdue(t, now)).length;
 		const blocked = open.filter(isBlocked).length;
 		const left = round1(open.reduce((a, t) => a + (t.estimate ? Math.max(0, t.estimate - t.spent) : 0), 0));
-		const chip = (text: string, cls = "") => el.createSpan({ cls: `tt-list-chip ${cls}`.trim(), text });
+		const chip = (text: string, cls = "", icon = "") => {
+			const c = el.createSpan({ cls: `tt-list-chip ${cls}`.trim() });
+			if (icon) setIcon(c.createSpan({ cls: "tt-list-chip-icon" }), icon);
+			c.createSpan({ text });
+		};
 		chip(`${tasks.length} task${tasks.length === 1 ? "" : "s"}`);
-		if (open.length !== tasks.length) chip(`${open.length} open`);
-		if (overdue) chip(`${overdue} overdue`, "is-late");
-		if (blocked) chip(`🔒 ${blocked} blocked`, "is-blocked");
-		if (left) chip(`⏱ ${left}h left`);
+		if (open.length !== tasks.length) chip(`${open.length} open`, "is-open", "circle-dot");
+		if (overdue) chip(`${overdue} overdue`, "is-late", "alert-circle");
+		if (blocked) chip(`${blocked} blocked`, "is-blocked", "lock");
+		if (left) chip(`${left}h left`, "", "clock");
 	}
 
 	private renderTable(parent: HTMLElement, tasks: Task[], now: string): void {

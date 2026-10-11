@@ -1,5 +1,6 @@
 import { moment } from "obsidian";
 import type { PomodoroArchive, PomodoroSession } from "./settings";
+import type { Period } from "./analytics";
 import { today } from "./store";
 
 // Pure calculations over the Pomodoro session history — no DOM, no charts.
@@ -47,6 +48,11 @@ export function thisWeek(sessions: PomodoroSession[]): PomodoroSession[] {
 	return sessions.filter((s) => day(s) >= from);
 }
 
+/** Sessions that started between two dates (inclusive, YYYY-MM-DD). */
+export function between(sessions: PomodoroSession[], from: string, to: string): PomodoroSession[] {
+	return sessions.filter((s) => day(s) >= from && day(s) <= to);
+}
+
 /** Days in a row, ending today (or yesterday if nothing yet today), with at least one 🍅. */
 export function streak(sessions: PomodoroSession[]): number {
 	const days = new Set(sessions.filter((s) => s.completed).map(day));
@@ -71,16 +77,33 @@ export function dailyMinutes(sessions: PomodoroSession[], n = 14): { label: stri
 	return out;
 }
 
-/** Tasks with the most focus time, largest first. Grouped by title so renames don't split a task. */
-export function focusByTask(sessions: PomodoroSession[], limit = 6): { title: string; task: string; minutes: number }[] {
-	const map = new Map<string, { title: string; task: string; minutes: number }>();
-	for (const s of sessions) {
-		const row = map.get(s.title) ?? { title: s.title, task: s.task, minutes: 0 };
-		row.minutes += s.minutes;
-		row.task = s.task; // latest known path
-		map.set(s.title, row);
+/** Focus minutes per bucket for a period: Day → hours, Week/Month → days, Year/All → months. */
+export function focusBuckets(sessions: PomodoroSession[], period: Period): { label: string; minutes: number }[] {
+	const sum = (list: PomodoroSession[]) => list.reduce((a, s) => a + s.minutes, 0);
+	if (period === "day") {
+		const d = today();
+		const mine = onDay(sessions, d);
+		return Array.from({ length: 24 }, (_, h) => ({
+			label: `${String(h).padStart(2, "0")}:00`,
+			minutes: sum(mine.filter((s) => moment(s.start).hour() === h)),
+		}));
 	}
-	return [...map.values()].sort((a, b) => b.minutes - a.minutes).slice(0, limit);
+	if (period === "week" || period === "month") {
+		const from = moment().startOf(period);
+		const n = period === "week" ? 7 : from.daysInMonth();
+		return Array.from({ length: n }, (_, i) => {
+			const d = from.clone().add(i, "days");
+			return { label: d.format(period === "week" ? "ddd D" : "D"), minutes: sum(onDay(sessions, d.format("YYYY-MM-DD"))) };
+		});
+	}
+	const first = period === "year" ? moment().startOf("year") : moment(sessions.reduce((m, s) => (s.start < m ? s.start : m), sessions[0]?.start ?? new Date().toISOString())).startOf("month");
+	const last = moment().startOf("month");
+	const out: { label: string; minutes: number }[] = [];
+	for (const m = first.clone(); m.isSameOrBefore(last); m.add(1, "month")) {
+		const key = m.format("YYYY-MM");
+		out.push({ label: m.format(period === "year" ? "MMM" : "MMM YY"), minutes: sum(sessions.filter((s) => s.start.slice(0, 7) === key)) });
+	}
+	return out;
 }
 
 /** 135 → "2h 15m", 40 → "40m". */

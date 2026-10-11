@@ -89,13 +89,20 @@ export class TodayView extends ItemView {
 
 	private renderHeader(root: HTMLElement, toFinish: number, done: number): void {
 		const header = root.createDiv({ cls: "tt-dash-header" });
-		const heading = header.createDiv({ cls: "tt-dash-heading" });
+		const brand = header.createDiv({ cls: "tt-brand" });
+		setIcon(brand.createDiv({ cls: "tt-brand-icon" }), "calendar-check");
+		const heading = brand.createDiv({ cls: "tt-dash-heading" });
 		heading.createDiv({ cls: "tt-dash-eyebrow", text: "Today" });
 		heading.createEl("h2", { cls: "tt-dash-title", text: moment().format("dddd, MMM D") });
-		heading.createDiv({
-			cls: "tt-dash-sub",
-			text: `${toFinish} to finish today · ${done} done · ${this.plugin.pomodoro.completedToday()} 🍅`,
-		});
+		const chips = heading.createDiv({ cls: "tt-list-chips" });
+		const chip = (text: string, cls = "", icon = "") => {
+			const c = chips.createSpan({ cls: `tt-list-chip ${cls}`.trim() });
+			if (icon) setIcon(c.createSpan({ cls: "tt-list-chip-icon" }), icon);
+			c.createSpan({ text });
+		};
+		chip(`${toFinish} to finish`, "is-open", "circle-dot");
+		chip(`${done} done`, "", "check");
+		chip(`${this.plugin.pomodoro.completedToday()} 🍅`);
 		const controls = header.createDiv({ cls: "tt-dash-controls" });
 		const cal = controls.createEl("button", { text: "Calendar" });
 		cal.addEventListener("click", () => this.plugin.openCalendarView());

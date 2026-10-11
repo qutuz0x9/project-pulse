@@ -271,6 +271,42 @@ export function statusTrendChart(canvas: HTMLCanvasElement, trend: StatusTrend, 
 	});
 }
 
+/** Single-series line of whole-number values (e.g. focus minutes per bucket). */
+export function lineChart(canvas: HTMLCanvasElement, labels: string[], data: number[], color: string, label: string, animate: boolean, unit = ""): Chart {
+	const { t, options } = baseOptions(animate);
+	return new Chart(canvas, {
+		type: "line",
+		data: {
+			labels,
+			datasets: [
+				{
+					label,
+					data,
+					borderColor: color,
+					backgroundColor: color + "26",
+					fill: true,
+					borderWidth: 2,
+					pointRadius: labels.length <= 14 ? 3 : 0,
+					pointHoverRadius: 5,
+					pointBorderColor: t.surface,
+					pointBorderWidth: 2,
+					tension: 0,
+				},
+			],
+		},
+		options: {
+			...options,
+			interaction: { mode: "index", intersect: false },
+			scales: axes(t.grid, false, false),
+			plugins: {
+				...options.plugins,
+				legend: { ...options.plugins.legend, display: false },
+				tooltip: { ...options.plugins.tooltip, callbacks: { label: (ctx) => ` ${ctx.dataset.label ?? ""}: ${ctx.formattedValue}${unit}` } },
+			},
+		},
+	});
+}
+
 function truncate(s: string, n: number): string {
 	return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
